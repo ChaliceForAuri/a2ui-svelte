@@ -4,7 +4,7 @@ import {
 	INITIAL_STATE,
 	reduce,
 	trackPendingAction,
-	clientDataModelMetadata
+	rendererDataModelMetadata
 } from '../src/lib/protocol/reducer.ts';
 import type { ClientState } from '../src/lib/protocol/reducer.ts';
 import { createFunctionRegistry } from '../src/lib/protocol/resolve.ts';
@@ -233,7 +233,7 @@ test('actionResponse for an unknown actionId is ignored', () => {
 	assert.deepEqual(state.surfaces.s1?.dataModel, {});
 });
 
-test('clientDataModelMetadata only includes surfaces that opted in', () => {
+test('rendererDataModelMetadata only includes surfaces that opted in', () => {
 	const { state } = run(
 		INITIAL_STATE,
 		{ version: 'v1.0', createSurface: { surfaceId: 'quiet' } },
@@ -242,9 +242,9 @@ test('clientDataModelMetadata only includes surfaces that opted in', () => {
 			createSurface: { surfaceId: 'loud', sendDataModel: true, dataModel: { a: 1 } }
 		}
 	);
-	const meta = clientDataModelMetadata(state);
-	assert.deepEqual(meta?.a2uiClientDataModel?.surfaces, { loud: { a: 1 } });
-	assert.equal(clientDataModelMetadata(INITIAL_STATE), undefined);
+	const meta = rendererDataModelMetadata(state);
+	assert.deepEqual(meta?.a2uiRendererDataModel?.surfaces, { loud: { a: 1 } });
+	assert.equal(rendererDataModelMetadata(INITIAL_STATE), undefined);
 });
 
 test('prototype-polluting data paths are refused, not applied', () => {

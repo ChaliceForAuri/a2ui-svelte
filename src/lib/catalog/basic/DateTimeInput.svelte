@@ -34,15 +34,26 @@
 	const type = $derived(enableDate && enableTime ? 'datetime-local' : enableTime ? 'time' : 'date');
 
 	/**
-	 * The data model holds ISO 8601; the input elements want their own truncated
-	 * forms, so convert in both directions rather than storing what the DOM gives.
+	 * The data model holds ISO 8601 (usually UTC); the input elements want local
+	 * wall-clock strings. Slicing the ISO string would display UTC digits as if
+	 * they were local — type 14:30 in UTC+2, see 12:30 — so instant-bearing
+	 * values are converted through Date instead.
 	 */
+	const pad2 = (n: number) => String(n).padStart(2, '0');
+
+	function localDateTime(iso: string): string {
+		const d = new Date(iso);
+		if (Number.isNaN(d.getTime())) return iso.slice(0, 16);
+		return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+	}
+
 	const displayValue = $derived.by(() => {
 		const raw = binding?.value;
 		if (typeof raw !== 'string' || raw === '') return '';
 		if (type === 'date') return raw.slice(0, 10);
-		if (type === 'time') return raw.length > 10 ? raw.slice(11, 16) : raw.slice(0, 5);
-		return raw.slice(0, 16);
+		if (type === 'time')
+			return raw.length > 10 ? localDateTime(raw).slice(11, 16) : raw.slice(0, 5);
+		return localDateTime(raw);
 	});
 
 	function write(raw: string) {

@@ -25,8 +25,17 @@ export interface AgUiEvent {
 	[k: string]: unknown;
 }
 
-/** Activity types conventionally used to carry A2UI. */
-export const A2UI_ACTIVITY_TYPES = ['a2ui', 'application/a2ui+json', 'application/json+a2ui'];
+/**
+ * Activity types conventionally used to carry A2UI. `a2ui-surface` is what
+ * AG-UI's official `@ag-ui/a2ui-middleware` emits; the rest appear in earlier
+ * integrations (`application/json+a2ui` is the pre-v0.9.1 MIME).
+ */
+export const A2UI_ACTIVITY_TYPES = [
+	'a2ui-surface',
+	'a2ui',
+	'application/a2ui+json',
+	'application/json+a2ui'
+];
 
 /**
  * Pull zero or more A2UI messages out of an activity payload. Handles the three

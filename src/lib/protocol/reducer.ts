@@ -327,10 +327,10 @@ export function trackPendingAction(
 }
 
 /**
- * `a2uiClientDataModel` metadata for surfaces created with `sendDataModel`.
+ * `a2uiRendererDataModel` metadata for surfaces created with `sendDataModel`.
  * An orchestrator must strip this before forwarding to a different sub-agent.
  */
-export function clientDataModelMetadata(
+export function rendererDataModelMetadata(
 	state: ClientState
 ): RendererToAgent['metadata'] | undefined {
 	const surfaces: Record<string, unknown> = {};
@@ -341,5 +341,5 @@ export function clientDataModelMetadata(
 			any = true;
 		}
 	}
-	return any ? { a2uiClientDataModel: { version: A2UI_VERSION, surfaces } } : undefined;
+	return any ? { a2uiRendererDataModel: { version: A2UI_VERSION, surfaces } } : undefined;
 }

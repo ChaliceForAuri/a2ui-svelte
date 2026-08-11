@@ -27,6 +27,10 @@ jobs:
       # Protocol + render suite. No build step, no browser.
       - run: npm test
 
+      # Component suite: Vitest browser mode against headless Chromium.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
       - run: npm run check
 
       # Catches malformed exports maps and missing files before publish.

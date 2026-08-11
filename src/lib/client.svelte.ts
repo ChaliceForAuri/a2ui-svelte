@@ -20,7 +20,7 @@ import {
 import type { FunctionRegistry } from './protocol/functions.js';
 import {
 	INITIAL_STATE,
-	clientDataModelMetadata,
+	rendererDataModelMetadata,
 	reduce,
 	trackPendingAction,
 	type ClientState,
@@ -204,7 +204,7 @@ export class A2uiClient {
 		};
 
 		const message: RendererToAgent = { version: A2UI_VERSION, action: rendererAction };
-		const metadata = clientDataModelMetadata(this.#state);
+		const metadata = rendererDataModelMetadata(this.#state);
 		if (metadata) message.metadata = metadata;
 
 		this.#options.onAction?.(rendererAction);

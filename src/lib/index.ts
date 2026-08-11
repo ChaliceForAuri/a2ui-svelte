@@ -88,7 +88,7 @@ export {
 	ROOT_COMPONENT_ID,
 	reduce,
 	trackPendingAction,
-	clientDataModelMetadata
+	rendererDataModelMetadata
 } from './protocol/reducer.js';
 export type { ClientState, SurfaceState } from './protocol/reducer.js';
 

@@ -206,9 +206,12 @@ export interface RendererToAgent {
 	action?: RendererAction;
 	functionResponse?: RendererFunctionResponse;
 	error?: RendererError;
-	/** Populated when the surface was created with `sendDataModel: true`. */
+	/**
+	 * Populated when the surface was created with `sendDataModel: true`.
+	 * v1.0 renamed this key from v0.9's `a2uiClientDataModel`.
+	 */
 	metadata?: {
-		a2uiClientDataModel?: {
+		a2uiRendererDataModel?: {
 			version: string;
 			surfaces: Record<string, unknown>;
 		};

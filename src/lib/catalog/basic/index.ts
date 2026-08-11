@@ -2,7 +2,7 @@
  * The A2UI v1.0 basic catalog, rendered in Svelte.
  *
  * Property names track `catalogs/basic/catalog.json` exactly — including the
- * v1.0 renames that trip up implementations built against v0.9: `Modal` uses
+ * renames (v0.8 → v0.9) that trip up implementations built against v0.8: `Modal` uses
  * `trigger`/`content` (not `entryPointChild`/`contentChild`), `Tabs` uses `tabs`
  * (not `tabItems`), `Slider` uses `min`/`max` (not `minValue`/`maxValue`),
  * `TextField` uses `value`/`variant` (not `text`/`textFieldType`), and

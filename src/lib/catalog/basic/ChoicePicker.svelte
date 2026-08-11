@@ -19,6 +19,7 @@
 		disabled?: boolean;
 		weight?: number;
 		ariaLabel?: string;
+		a2ui?: { id: string };
 	}
 
 	let {
@@ -31,8 +32,12 @@
 		filterable = false,
 		disabled = false,
 		weight,
-		ariaLabel
+		ariaLabel,
+		a2ui
 	}: Props = $props();
+
+	// Radios need a shared name to form one group for arrow-key navigation.
+	const group = $derived(`a2ui-choice-${a2ui?.id ?? 'anon'}`);
 
 	const binding = $derived(bindings.value);
 
@@ -89,6 +94,7 @@
 				<label class="option">
 					<input
 						type={variant === 'mutuallyExclusive' ? 'radio' : 'checkbox'}
+						name={variant === 'mutuallyExclusive' ? group : undefined}
 						checked={selected.includes(option.value)}
 						onchange={() => toggle(option.value)}
 					/>

@@ -64,7 +64,7 @@ These are the rules that make the design work. Breaking one silently degrades co
 1. **Browser tests for the components.** Vitest + `vitest-browser-svelte`. The protocol is well covered; the Svelte layer has zero automated coverage. Priority order: `Node`/`Slot` recursion and keying, `TextField`/`CheckBox` binding round-trips, `Tabs` selection clamping, `Modal` dialog lifecycle.
 2. **CI green on GitHub** — the workflow in `.github/workflows/ci.yml` runs test + check + package on push; verify it passes once the repo is pushed to `ChaliceForAuri/a2ui-svelte`.
 3. **A2A transport binding.** A2UI rides in A2A `DataParts` with MIME `application/a2ui+json`. Mirrors the existing AG-UI adapter.
-4. **Complete the `Icon` enum.** 44 of the spec's 52 names ship; the rest fall back to a neutral glyph. Needs a read of `catalogs/basic/catalog.json`.
+4. **Complete the `Icon` enum.** 44 of the spec's 59 names ship (v0.9→v1.0 all have 59); the rest fall back to a neutral glyph. The spec also allows `Icon.name` to be an `{svgPath}` object, which isn't handled yet. The authoritative list is in `specification/v1_0/catalogs/basic/catalog.json` in the a2ui repo.
 5. **Verify the AG-UI activity envelope against a real backend.** `defaultExtract` in `src/lib/transport/agui.ts` handles three plausible encodings because the exact shape couldn't be confirmed from docs. Pin it down, then simplify.
 6. **Submit to the A2UI ecosystem list** once 1–2 are done.
 

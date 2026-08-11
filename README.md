@@ -141,7 +141,7 @@ Pass `{ strict: true }` to `createCatalogRegistry` to enforce the spec's rule th
 | `callFunction` / `functionResponse`, `callableFrom` enforcement      | ✅                                            |
 | `actionResponse` → `responsePath`                                    | ✅                                            |
 | Renderer → agent `action`, `error` (all four codes)                  | ✅                                            |
-| `sendDataModel` → `a2uiClientDataModel` metadata                     | ✅                                            |
+| `sendDataModel` → `a2uiRendererDataModel` metadata                   | ✅                                            |
 | Data binding, collection scope, relative vs absolute paths           | ✅                                            |
 | `${…}` interpolation, nested calls, `@index(offset)`                 | ✅                                            |
 | All 14 built-in functions + `checks` (both rule shapes)              | ✅                                            |
@@ -149,9 +149,9 @@ Pass `{ strict: true }` to `createCatalogRegistry` to enforce the spec's rule th
 | Transports: HTTP/JSONL, SSE, AG-UI activities, mock                  | ✅                                            |
 | A2A transport binding                                                | not yet                                       |
 | Catalog capability negotiation                                       | not yet                                       |
-| Full 52-name `Icon` enum                                             | 44 shipped, rest fall back to a neutral glyph |
+| Full 59-name `Icon` enum                                             | 44 shipped, rest fall back to a neutral glyph |
 
-Built against **v1.0**, which renamed several v0.9 properties. This library uses the v1.0 names: `Modal.trigger`/`content` (not `entryPointChild`/`contentChild`), `Tabs.tabs` (not `tabItems`), `Slider.min`/`max` (not `minValue`/`maxValue`), `TextField.value`/`variant` (not `text`/`textFieldType`), and `ChoicePicker` (not `MultipleChoice`).
+Built against **v1.0** (currently a Candidate, slated to finalize Q4 2026). This library uses the current property names — `Modal.trigger`/`content` (not v0.8's `entryPointChild`/`contentChild`), `Tabs.tabs` (not `tabItems`), `Slider.min`/`max` (not `minValue`/`maxValue`), `TextField.value`/`variant` (not `text`/`textFieldType`), and `ChoicePicker` (not `MultipleChoice`) — which are shared by v0.9 and v1.0; only v0.8 used the old ones. The v1.0-specific behaviours (inline `createSurface` components/data, `updateDataModel` null-deletes, the `a2uiRendererDataModel` metadata key) are implemented.
 
 ## Architecture
 
@@ -182,7 +182,7 @@ The threat model assumes the agent is untrusted.
 - **Bounded recursion.** `maxDepth` on surfaces, and a depth guard on function/expression evaluation that lives on the eval context so it survives re-entry from a custom function.
 - **`callableFrom` is enforced.** Agent-initiated `callFunction` against a renderer-only function returns `INVALID_FUNCTION_CALL`. Every built-in is renderer-only.
 
-If you forward A2UI between agents, strip `metadata.a2uiClientDataModel` — the spec requires it, to stop one sub-agent's surface state leaking into another's.
+If you forward A2UI between agents, strip `metadata.a2uiRendererDataModel` — the spec requires it, to stop one sub-agent's surface state leaking into another's.
 
 ## Demo
 
