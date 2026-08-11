@@ -82,7 +82,7 @@
 		"prepublishOnly": "npm run package",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"test": "node --experimental-strip-types --import ./tests/register-hook.mjs --test tests/*.test.ts",
-		"test:browser": "vitest run",
+		"test:browser": "svelte-kit sync && vitest run",
 		"format": "prettier --write .",
 		"lint": "prettier --check ."
 	}
