@@ -61,12 +61,15 @@ These are the rules that make the design work. Breaking one silently degrades co
 
 ## Highest-value next work, in order
 
-1. **Browser tests for the components.** Vitest + `vitest-browser-svelte`. The protocol is well covered; the Svelte layer has zero automated coverage. Priority order: `Node`/`Slot` recursion and keying, `TextField`/`CheckBox` binding round-trips, `Tabs` selection clamping, `Modal` dialog lifecycle.
-2. **CI green on GitHub** — the workflow in `.github/workflows/ci.yml` runs test + check + package on push; verify it passes once the repo is pushed to `ChaliceForAuri/a2ui-svelte`.
-3. **A2A transport binding.** A2UI rides in A2A `DataParts` with MIME `application/a2ui+json`. Mirrors the existing AG-UI adapter.
-4. **Complete the `Icon` enum.** 44 of the spec's 59 names ship (v0.9→v1.0 all have 59); the rest fall back to a neutral glyph. The spec also allows `Icon.name` to be an `{svgPath}` object, which isn't handled yet. The authoritative list is in `specification/v1_0/catalogs/basic/catalog.json` in the a2ui repo.
-5. **Verify the AG-UI activity envelope against a real backend.** `defaultExtract` in `src/lib/transport/agui.ts` handles three plausible encodings because the exact shape couldn't be confirmed from docs. Pin it down, then simplify.
-6. **Submit to the A2UI ecosystem list** once 1–2 are done.
+(Browser tests and green CI shipped 2026-08-11: 16 Vitest browser-mode tests in `tests/browser/`, run via `npm run test:browser`.)
+
+1. **Publish to npm.** The ecosystem listing table has an npm-package column; an uninstallable renderer won't be listed. `npm run package` + `publint` are already clean.
+2. **Complete the `Icon` enum.** 44 of the spec's 59 names ship (v0.9→v1.0 all have 59); the rest fall back to a neutral glyph. The spec also allows `Icon.name` to be an `{svgPath: DynamicString}` object, which isn't handled yet. Authoritative list: `specification/v1_0/catalogs/basic/catalog.json` in the a2ui repo.
+3. **Renderer capability metadata.** Spec v1.0 wants `metadata.a2uiRendererCapabilities` (`{"v1.0": {supportedCatalogIds: [...]}}`) on every renderer→agent message (schema `renderer_capabilities.json`). Needs the client to know the registry's catalog ids — likely an `A2uiClient` option.
+4. **A2A transport binding.** A2UI messages ride as an _array_ in an A2A `DataPart` with `metadata.mimeType: "application/a2ui+json"`; extension URI `https://a2ui.org/a2a-extension/a2ui/v1.0`. Process the list sequentially, log-and-continue per message, avoid repainting mid-list.
+5. **Submit to the A2UI ecosystem list.** Documented process: PR adding a row to `docs/public/ecosystem/renderers.md` in `a2ui-project/a2ui` (name, platform, npm package, supported versions, source link) + a GitHub Discussions post, demo video encouraged. Criteria are published source/license, stated spec versions, basic-catalog coverage, README, active maintenance — all met except the npm package (item 1).
+
+Spec caution: v1.0 is a **Candidate** (finalize target Q4 2026) and the repo moves daily — re-verify wire details against `specification/v1_0/` before implementing new protocol surface. The strict no-fallback catalog-resolution rule (per-component `catalogId` → surface default → error) is spec-mandated; our lenient default name-search should eventually be revisited.
 
 ## Conventions
 
