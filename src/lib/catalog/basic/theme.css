@@ -1,0 +1,59 @@
+/**
+ * Basic catalog theme.
+ *
+ * v1.0 removed agent-supplied theming entirely: agents send semantic hints
+ * (`variant: "primary"`), never colours or sizes. Everything visual is the
+ * host's call, so every token below is a plain custom property declared at
+ * `:where(:root)` — zero specificity, so `:root { --a2ui-color-primary: … }` in
+ * your own stylesheet wins without `!important`.
+ */
+
+:where(:root),
+:where(.a2ui-light) {
+	--a2ui-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--a2ui-font-family-monospace: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	--a2ui-color-text: #16181d;
+	--a2ui-color-text-muted: #5c6370;
+	--a2ui-color-primary: #2f6feb;
+	--a2ui-color-on-primary: #ffffff;
+	--a2ui-color-surface: #ffffff;
+	--a2ui-color-surface-raised: #f6f7f9;
+	--a2ui-color-border: #d8dce3;
+	--a2ui-color-danger: #b3261e;
+
+	/* Leaf-margin strategy: containers contribute no spacing, leaves do. */
+	--a2ui-space-leaf: 0.5rem;
+	--a2ui-space-inset: 1rem;
+	--a2ui-radius: 10px;
+	--a2ui-radius-small: 6px;
+	--a2ui-control-height: 2.25rem;
+	--a2ui-elevation: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+	:where(:root) {
+		--a2ui-color-text: #e7e9ee;
+		--a2ui-color-text-muted: #9aa2b1;
+		--a2ui-color-primary: #6c9bff;
+		--a2ui-color-on-primary: #0b1020;
+		--a2ui-color-surface: #14161b;
+		--a2ui-color-surface-raised: #1c1f26;
+		--a2ui-color-border: #2c313b;
+		--a2ui-color-danger: #f2b8b5;
+		--a2ui-elevation: 0 1px 2px rgb(0 0 0 / 0.5);
+	}
+}
+
+/* Force a scheme regardless of the OS preference. */
+:where(.a2ui-dark) {
+	--a2ui-color-text: #e7e9ee;
+	--a2ui-color-text-muted: #9aa2b1;
+	--a2ui-color-primary: #6c9bff;
+	--a2ui-color-on-primary: #0b1020;
+	--a2ui-color-surface: #14161b;
+	--a2ui-color-surface-raised: #1c1f26;
+	--a2ui-color-border: #2c313b;
+	--a2ui-color-danger: #f2b8b5;
+	--a2ui-elevation: 0 1px 2px rgb(0 0 0 / 0.5);
+}

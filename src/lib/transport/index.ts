@@ -1,0 +1,10 @@
+export type { Transport, MessageHandler } from './types.js';
+export { createEmitter } from './types.js';
+export { createHttpTransport, createMockTransport } from './http.js';
+export type { HttpTransportOptions } from './http.js';
+export { createAgUiTransport, defaultExtract, A2UI_ACTIVITY_TYPES } from './agui.js';
+export type { AgUiEvent, AgUiTransportOptions } from './agui.js';
+export { applyPatch, JsonPatchError } from './json-patch.js';
+export type { PatchOp } from './json-patch.js';
+export { readLines, readJsonLines, readSse } from './stream.js';
+export type { SseEvent } from './stream.js';

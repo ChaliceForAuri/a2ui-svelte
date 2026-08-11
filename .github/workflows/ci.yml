@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 needs --experimental-strip-types for the test suite; 24 strips by default.
+        node: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # Protocol + render suite. No build step, no browser.
+      - run: npm test
+
+      - run: npm run check
+
+      # Catches malformed exports maps and missing files before publish.
+      - run: npm run package
