@@ -20,7 +20,7 @@ Consequence: **track the spec, don't improve on it.** If the spec says `Modal` h
 - ✅ The demo has been driven in headless Chromium: the form streams in progressively, validation gates the submit button, the action round-trip carries the hand-picked `context`, dark mode renders, and the console is clean.
 - ✅ `svelte-package` emits `dist/` and `publint` passes.
 
-The `.svelte` components compile and render, but still have **no automated browser tests** — that's the top of the next-work list.
+Second wave (also 2026-08-11): 16 Vitest browser-mode tests cover the component layer (`npm run test:browser`), which caught and fixed a DateTimeInput timezone-display bug and missing ChoicePicker radio grouping; wire conformance was verified against the official spec repo (`a2ui-project/a2ui`), fixing the v1.0 metadata key (`a2uiRendererDataModel`) and adding AG-UI's real `a2ui-surface` activity type.
 
 ## Commands
 
