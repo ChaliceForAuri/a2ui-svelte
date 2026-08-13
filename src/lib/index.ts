@@ -1,5 +1,5 @@
 /**
- * a2ui-svelte — the A2UI (Agent-to-UI) protocol renderer for Svelte 5.
+ * svelte-a2ui — the A2UI (Agent-to-UI) protocol renderer for Svelte 5.
  *
  * Agents describe UI as data against a catalog you control; this package turns
  * that data into real Svelte components. No agent-authored code is ever
@@ -8,8 +8,8 @@
  * ```svelte
  * <script lang="ts">
  *   import { A2uiClient, Surface, createCatalogRegistry, basicCatalog, createHttpTransport }
- *     from 'a2ui-svelte';
- *   import 'a2ui-svelte/theme.css';
+ *     from 'svelte-a2ui';
+ *   import 'svelte-a2ui/theme.css';
  *
  *   const catalog = createCatalogRegistry([basicCatalog]);
  *   const client = new A2uiClient({

@@ -1,10 +1,10 @@
-# a2ui-svelte
+# svelte-a2ui
 
 **The [A2UI](https://a2ui.org) renderer for Svelte 5.**
 
 A2UI is the agent-to-UI protocol: an agent describes an interface as _data_ against a component catalog the client already owns, and the client renders it with its own components. No generated code, no sandboxed iframes, no HTML from the model. Google originated it; it's carried today over [A2A](https://a2a-protocol.org), [AG-UI](https://docs.ag-ui.com) and MCP.
 
-There are official renderers for React, Angular, Lit and Flutter. There is no Svelte one — the A2UI roadmap lists _"Svelte/Kit — Community interest"_ as unclaimed. This is that renderer.
+There are official renderers for React, Angular, Lit and Flutter. The Svelte slot is open — the A2UI roadmap lists _"Svelte/Kit — Community interest"_ as unclaimed, and the only prior community attempt targets the obsolete v0.8 wire format. This renderer targets **v1.0**, covers the full basic catalog, and is tested against the spec's own fixtures.
 
 ```svelte
 <script lang="ts">
@@ -14,8 +14,8 @@ There are official renderers for React, Angular, Lit and Flutter. There is no Sv
 		createCatalogRegistry,
 		basicCatalog,
 		createHttpTransport
-	} from 'a2ui-svelte';
-	import 'a2ui-svelte/theme.css';
+	} from 'svelte-a2ui';
+	import 'svelte-a2ui/theme.css';
 
 	const catalog = createCatalogRegistry([basicCatalog]);
 	const client = new A2uiClient({ transport: createHttpTransport({ url: '/api/agent' }) });
@@ -48,7 +48,7 @@ A2UI's model is worth understanding before the API, because it's what makes the 
 ## Install
 
 ```bash
-npm install a2ui-svelte
+npm install svelte-a2ui
 ```
 
 Requires Svelte `^5.55` (peer dependency). Works in SvelteKit, plain Vite, Astro — nothing imports `$app/*`.
@@ -87,7 +87,7 @@ A transport is three methods (`send`, `subscribe`, optional `start`/`close`), so
 The catalog is the security boundary — an agent can only name what you registered. A catalog entry declares which properties are _structural_, and the renderer does the rest:
 
 ```ts
-import type { Catalog } from 'a2ui-svelte';
+import type { Catalog } from 'svelte-a2ui';
 import Chart from './Chart.svelte';
 import Approve from './Approve.svelte';
 
@@ -114,7 +114,7 @@ Your component receives resolved scalars spread at the top level, plus four name
 
 ```svelte
 <script lang="ts">
-	import { Slot, type A2uiComponentProps } from 'a2ui-svelte';
+	import { Slot, type A2uiComponentProps } from 'svelte-a2ui';
 
 	let { title, slots, bindings, actions, validation }: A2uiComponentProps = $props();
 </script>

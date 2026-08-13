@@ -4,9 +4,11 @@ Context for Claude working in this repo. Read this before changing anything.
 
 ## What this is
 
-`a2ui-svelte` is a renderer for the [A2UI](https://a2ui.org) protocol (Agent-to-UI, v1.0) built on Svelte 5 runes. An agent streams JSON describing an interface; this library renders it using components the host application registered in advance. No agent-authored code is ever evaluated.
+`svelte-a2ui` (repo: `a2ui-svelte`) is a renderer for the [A2UI](https://a2ui.org) protocol (Agent-to-UI, v1.0) built on Svelte 5 runes. An agent streams JSON describing an interface; this library renders it using components the host application registered in advance. No agent-authored code is ever evaluated.
 
 **The positioning is deliberate and load-bearing — do not drift from it.** This is _not_ a general "generative UI" toolkit. That space is occupied: Vercel Labs ships `@json-render/svelte` with first-class Svelte support. This library targets the specific gap that A2UI's own roadmap lists as unclaimed — _"Svelte/Kit — Community interest"_ — while React, Angular, Lit and Flutter all have official renderers. The aim is to become the Svelte entry in that ecosystem, eventually `@a2ui/svelte`. Every design decision should be judged against "would the A2UI maintainers accept this as the Svelte renderer?"
+
+Naming: the npm package is **`svelte-a2ui`** — the name `a2ui-svelte` was taken on npm (June 2026, conversabile/dariowho) by a v0.8-era runtime with one release and no activity since; the GitHub repo keeps the `a2ui-svelte` name. Don't disparage the other package in public docs; just be precise about versions.
 
 Consequence: **track the spec, don't improve on it.** If the spec says `Modal` has `trigger`/`content`, we use `trigger`/`content` even if something else reads nicer. Deviations belong in a custom catalog, not in the basic one.
 

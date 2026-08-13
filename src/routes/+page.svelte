@@ -39,7 +39,7 @@
 <main class:a2ui-dark={dark}>
 	<header>
 		<div>
-			<h1>a2ui-svelte</h1>
+			<h1>svelte-a2ui</h1>
 			<p>
 				A2UI v1.0 rendered by Svelte 5. The agent below streams JSONL; nothing here is generated
 				code.
