@@ -343,3 +343,16 @@ export function rendererDataModelMetadata(
 	}
 	return any ? { a2uiRendererDataModel: { version: A2UI_VERSION, surfaces } } : undefined;
 }
+
+/**
+ * `a2uiRendererCapabilities` metadata (`renderer_capabilities.json`). The spec
+ * wants this on every renderer → agent message so an agent can discover which
+ * catalogs it may reference without a separate handshake.
+ */
+export function rendererCapabilitiesMetadata(
+	supportedCatalogIds: readonly string[]
+): NonNullable<RendererToAgent['metadata']> {
+	return {
+		a2uiRendererCapabilities: { [A2UI_VERSION]: { supportedCatalogIds: [...supportedCatalogIds] } }
+	};
+}

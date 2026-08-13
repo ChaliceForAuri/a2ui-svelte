@@ -4,7 +4,8 @@ import {
 	INITIAL_STATE,
 	reduce,
 	trackPendingAction,
-	rendererDataModelMetadata
+	rendererDataModelMetadata,
+	rendererCapabilitiesMetadata
 } from '../src/lib/protocol/reducer.ts';
 import type { ClientState } from '../src/lib/protocol/reducer.ts';
 import { createFunctionRegistry } from '../src/lib/protocol/resolve.ts';
@@ -255,4 +256,17 @@ test('prototype-polluting data paths are refused, not applied', () => {
 	assert.equal(outbound[0]?.error?.code, 'VALIDATION_FAILED');
 	assert.deepEqual(state.surfaces.s1?.dataModel, {});
 	assert.equal(({} as Record<string, unknown>).pwned, undefined);
+});
+
+test('rendererCapabilitiesMetadata matches the renderer_capabilities.json shape', () => {
+	const meta = rendererCapabilitiesMetadata([
+		'https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json'
+	]);
+	assert.deepEqual(meta, {
+		a2uiRendererCapabilities: {
+			'v1.0': {
+				supportedCatalogIds: ['https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json']
+			}
+		}
+	});
 });

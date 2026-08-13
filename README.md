@@ -134,24 +134,24 @@ Pass `{ strict: true }` to `createCatalogRegistry` to enforce the spec's rule th
 
 ## Protocol coverage
 
-| Area                                                                 | Status                                        |
-| -------------------------------------------------------------------- | --------------------------------------------- |
-| `createSurface` (incl. v1.0 inline components + data model)          | ✅                                            |
-| `updateComponents` (id-keyed upsert, `root` gating, buffering)       | ✅                                            |
-| `updateDataModel` (JSON Pointer paths, `null` deletes, root replace) | ✅                                            |
-| `deleteSurface`                                                      | ✅                                            |
-| `callFunction` / `functionResponse`, `callableFrom` enforcement      | ✅                                            |
-| `actionResponse` → `responsePath`                                    | ✅                                            |
-| Renderer → agent `action`, `error` (all four codes)                  | ✅                                            |
-| `sendDataModel` → `a2uiRendererDataModel` metadata                   | ✅                                            |
-| Data binding, collection scope, relative vs absolute paths           | ✅                                            |
-| `${…}` interpolation, nested calls, `@index(offset)`                 | ✅                                            |
-| All 14 built-in functions + `checks` (both rule shapes)              | ✅                                            |
-| Basic catalog — all 18 components, v1.0 property names               | ✅                                            |
-| Transports: HTTP/JSONL, SSE, AG-UI activities, mock                  | ✅                                            |
-| A2A transport binding                                                | not yet                                       |
-| Catalog capability negotiation                                       | not yet                                       |
-| Full 59-name `Icon` enum                                             | 44 shipped, rest fall back to a neutral glyph |
+| Area                                                                 | Status                       |
+| -------------------------------------------------------------------- | ---------------------------- |
+| `createSurface` (incl. v1.0 inline components + data model)          | ✅                           |
+| `updateComponents` (id-keyed upsert, `root` gating, buffering)       | ✅                           |
+| `updateDataModel` (JSON Pointer paths, `null` deletes, root replace) | ✅                           |
+| `deleteSurface`                                                      | ✅                           |
+| `callFunction` / `functionResponse`, `callableFrom` enforcement      | ✅                           |
+| `actionResponse` → `responsePath`                                    | ✅                           |
+| Renderer → agent `action`, `error` (all four codes)                  | ✅                           |
+| `sendDataModel` → `a2uiRendererDataModel` metadata                   | ✅                           |
+| Data binding, collection scope, relative vs absolute paths           | ✅                           |
+| `${…}` interpolation, nested calls, `@index(offset)`                 | ✅                           |
+| All 14 built-in functions + `checks` (both rule shapes)              | ✅                           |
+| Basic catalog — all 18 components, v1.0 property names               | ✅                           |
+| Transports: HTTP/JSONL, SSE, AG-UI activities, mock                  | ✅                           |
+| A2A transport binding                                                | not yet                      |
+| Capability advertisement (`a2uiRendererCapabilities`)                | ✅ (inline catalogs not yet) |
+| Full 59-name `Icon` enum + `{svgPath}` custom glyphs                 | ✅                           |
 
 Built against **v1.0** (currently a Candidate, slated to finalize Q4 2026). This library uses the current property names — `Modal.trigger`/`content` (not v0.8's `entryPointChild`/`contentChild`), `Tabs.tabs` (not `tabItems`), `Slider.min`/`max` (not `minValue`/`maxValue`), `TextField.value`/`variant` (not `text`/`textFieldType`), and `ChoicePicker` (not `MultipleChoice`) — which are shared by v0.9 and v1.0; only v0.8 used the old ones. The v1.0-specific behaviours (inline `createSurface` components/data, `updateDataModel` null-deletes, the `a2uiRendererDataModel` metadata key) are implemented.
 

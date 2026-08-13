@@ -20,6 +20,7 @@
 		log = [];
 		const next = new A2uiClient({
 			transport: createHttpTransport({ url: '/api/agent' }),
+			supportedCatalogIds: catalog.ids,
 			onAction: (action) => (log = [action, ...log])
 		});
 		next.start();

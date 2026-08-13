@@ -207,13 +207,18 @@ export interface RendererToAgent {
 	functionResponse?: RendererFunctionResponse;
 	error?: RendererError;
 	/**
-	 * Populated when the surface was created with `sendDataModel: true`.
-	 * v1.0 renamed this key from v0.9's `a2uiClientDataModel`.
+	 * `a2uiRendererDataModel` is populated when a surface was created with
+	 * `sendDataModel: true`; `a2uiRendererCapabilities` advertises supported
+	 * catalogs on every message (`renderer_capabilities.json`). v1.0 renamed
+	 * both keys from v0.9's `a2uiClient*`.
 	 */
 	metadata?: {
 		a2uiRendererDataModel?: {
 			version: string;
 			surfaces: Record<string, unknown>;
+		};
+		a2uiRendererCapabilities?: {
+			'v1.0': { supportedCatalogIds: string[] };
 		};
 	};
 }

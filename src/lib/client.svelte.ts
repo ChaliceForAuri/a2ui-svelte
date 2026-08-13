@@ -21,6 +21,7 @@ import type { FunctionRegistry } from './protocol/functions.js';
 import {
 	INITIAL_STATE,
 	rendererDataModelMetadata,
+	rendererCapabilitiesMetadata,
 	reduce,
 	trackPendingAction,
 	type ClientState,
@@ -41,6 +42,12 @@ export interface A2uiClientOptions {
 	transport?: Transport;
 	/** Host functions, merged over the built-ins. */
 	functions?: FunctionRegistry;
+	/**
+	 * Catalog ids to advertise as `a2uiRendererCapabilities` metadata on every
+	 * outbound message, per the v1.0 capability-negotiation contract. Typically
+	 * `catalogRegistry.ids`.
+	 */
+	supportedCatalogIds?: readonly string[];
 	/** Observe outbound actions (analytics, optimistic UI, logging). */
 	onAction?: (action: RendererAction) => void;
 	/** Observe every inbound message before it is reduced. */
@@ -203,19 +210,30 @@ export class A2uiClient {
 			...(wantResponse ? { wantResponse, actionId } : {})
 		};
 
-		const message: RendererToAgent = { version: A2UI_VERSION, action: rendererAction };
-		const metadata = rendererDataModelMetadata(this.#state);
-		if (metadata) message.metadata = metadata;
-
 		this.#options.onAction?.(rendererAction);
-		this.#send(message);
+		this.#send({ version: A2UI_VERSION, action: rendererAction });
 	}
 
 	/* --------------------------------------------------------------- private */
 
+	/**
+	 * Every outbound message carries the metadata the spec asks the renderer to
+	 * attach: capability advertisement always (when configured), and the full
+	 * data model for surfaces that opted into `sendDataModel`.
+	 */
+	#withMetadata(message: RendererToAgent): RendererToAgent {
+		const capabilities = this.#options.supportedCatalogIds?.length
+			? rendererCapabilitiesMetadata(this.#options.supportedCatalogIds)
+			: undefined;
+		const dataModel = rendererDataModelMetadata(this.#state);
+		if (!capabilities && !dataModel) return message;
+		return { ...message, metadata: { ...capabilities, ...dataModel, ...message.metadata } };
+	}
+
 	#send(message: RendererToAgent): void {
 		const transport = this.#options.transport;
 		if (!transport) return;
+		message = this.#withMetadata(message);
 		try {
 			const result = transport.send(message);
 			if (result instanceof Promise) result.catch((error) => this.#fail(error));
