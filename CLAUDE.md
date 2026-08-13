@@ -65,7 +65,7 @@ These are the rules that make the design work. Breaking one silently degrades co
 
 (Browser tests and green CI shipped 2026-08-11: 16 Vitest browser-mode tests in `tests/browser/`, run via `npm run test:browser`.)
 
-1. **Publish to npm.** The ecosystem listing table has an npm-package column; an uninstallable renderer won't be listed. `npm run package` + `publint` are already clean.
+1. ~~Publish to npm~~ — done 2026-08-13: `svelte-a2ui@0.1.0`, verified by installing from the registry into a fresh Vite app and rendering it headless. Future releases go through `.github/workflows/release.yml` on `v*` tags via npm Trusted Publishing — Hugo must configure the trusted publisher on npmjs.com (package Settings → Publishing access: GitHub repo `ChaliceForAuri/a2ui-svelte`, workflow `release.yml`) before the first tagged release.
 2. **Complete the `Icon` enum.** 44 of the spec's 59 names ship (v0.9→v1.0 all have 59); the rest fall back to a neutral glyph. The spec also allows `Icon.name` to be an `{svgPath: DynamicString}` object, which isn't handled yet. Authoritative list: `specification/v1_0/catalogs/basic/catalog.json` in the a2ui repo.
 3. **Renderer capability metadata.** Spec v1.0 wants `metadata.a2uiRendererCapabilities` (`{"v1.0": {supportedCatalogIds: [...]}}`) on every renderer→agent message (schema `renderer_capabilities.json`). Needs the client to know the registry's catalog ids — likely an `A2uiClient` option.
 4. **A2A transport binding.** A2UI messages ride as an _array_ in an A2A `DataPart` with `metadata.mimeType: "application/a2ui+json"`; extension URI `https://a2ui.org/a2a-extension/a2ui/v1.0`. Process the list sequentially, log-and-continue per message, avoid repainting mid-list.

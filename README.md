@@ -1,5 +1,7 @@
 # svelte-a2ui
 
+[![CI](https://github.com/ChaliceForAuri/a2ui-svelte/actions/workflows/ci.yml/badge.svg)](https://github.com/ChaliceForAuri/a2ui-svelte/actions/workflows/ci.yml) [![npm](https://img.shields.io/npm/v/svelte-a2ui)](https://www.npmjs.com/package/svelte-a2ui)
+
 **The [A2UI](https://a2ui.org) renderer for Svelte 5.**
 
 A2UI is the agent-to-UI protocol: an agent describes an interface as _data_ against a component catalog the client already owns, and the client renders it with its own components. No generated code, no sandboxed iframes, no HTML from the model. Google originated it; it's carried today over [A2A](https://a2a-protocol.org), [AG-UI](https://docs.ag-ui.com) and MCP.

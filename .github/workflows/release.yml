@@ -1,0 +1,35 @@
+name: Release
+
+# Publishes to npm when a v* tag is pushed, via npm Trusted Publishing (OIDC).
+# No token lives in this repo: npmjs.com is configured to trust this exact
+# workflow, and npm generates provenance attestations automatically.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+
+      # The full CI gate must pass before anything reaches the registry.
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: npm run check
+
+      # prepublishOnly runs svelte-package + publint.
+      - run: npm publish
