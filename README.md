@@ -78,6 +78,10 @@ createHttpTransport({ url: '/api/agent', body: { prompt }, headers: { … } })
 // AG-UI: A2UI rides inside ACTIVITY_SNAPSHOT / ACTIVITY_DELTA (RFC 6902 patches).
 createAgUiTransport({ events, send })
 
+// A2A: A2UI DataParts (mimeType application/a2ui+json) on Messages, Tasks and
+// streamed updates. Bring your own A2A client; this extracts and wraps.
+createA2aTransport({ events, send })
+
 // Offline: replay a fixture, optionally with a delay between messages.
 createMockTransport(messages, { delayMs: 300 })
 ```
@@ -148,8 +152,8 @@ Pass `{ strict: true }` to `createCatalogRegistry` to enforce the spec's rule th
 | `${…}` interpolation, nested calls, `@index(offset)`                 | ✅                           |
 | All 14 built-in functions + `checks` (both rule shapes)              | ✅                           |
 | Basic catalog — all 18 components, v1.0 property names               | ✅                           |
-| Transports: HTTP/JSONL, SSE, AG-UI activities, mock                  | ✅                           |
-| A2A transport binding                                                | not yet                      |
+| Transports: HTTP/JSONL, SSE, AG-UI activities, A2A, mock             | ✅                           |
+| A2A binding (`DataPart` extraction, metadata lifting, ext. URI)      | ✅                           |
 | Capability advertisement (`a2uiRendererCapabilities`)                | ✅ (inline catalogs not yet) |
 | Full 59-name `Icon` enum + `{svgPath}` custom glyphs                 | ✅                           |
 

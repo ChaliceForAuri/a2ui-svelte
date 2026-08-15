@@ -118,6 +118,17 @@ export type { ValidationResult } from './protocol/checks.js';
 /* --- transports --- */
 export { createHttpTransport, createMockTransport } from './transport/http.js';
 export { createAgUiTransport, defaultExtract, A2UI_ACTIVITY_TYPES } from './transport/agui.js';
+export {
+	createA2aTransport,
+	extractA2uiFromA2a,
+	extractA2uiParts,
+	a2uiDataPart,
+	toA2aOutbound,
+	A2UI_MIME_TYPE,
+	A2UI_MIME_TYPE_LEGACY,
+	A2UI_A2A_EXTENSION_URI
+} from './transport/a2a.js';
+export type { A2aDataPart, A2aOutbound, A2aTransportOptions } from './transport/a2a.js';
 export { applyPatch, JsonPatchError } from './transport/json-patch.js';
 export { readLines, readJsonLines, readSse, createEmitter } from './transport/index.js';
 export type {
