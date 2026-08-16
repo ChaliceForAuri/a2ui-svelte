@@ -9,6 +9,11 @@
 		type RendererAction
 	} from '$lib/index.js';
 	import '$lib/catalog/basic/theme.css';
+	import { createDemoReplayTransport } from './demo-script.js';
+
+	// The GitHub Pages build has no server, so the agent script replays
+	// client-side; everywhere else it streams over HTTP as JSONL.
+	const isStatic = import.meta.env.VITE_STATIC_DEMO === '1';
 
 	const catalog = createCatalogRegistry([basicCatalog]);
 
@@ -19,7 +24,9 @@
 	function makeClient() {
 		log = [];
 		const next = new A2uiClient({
-			transport: createHttpTransport({ url: '/api/agent' }),
+			transport: isStatic
+				? createDemoReplayTransport()
+				: createHttpTransport({ url: '/api/agent' }),
 			supportedCatalogIds: catalog.ids,
 			onAction: (action) => (log = [action, ...log])
 		});
@@ -44,6 +51,13 @@
 			<p>
 				A2UI v1.0 rendered by Svelte 5. The agent below streams JSONL; nothing here is generated
 				code.
+			</p>
+			<p class="links">
+				<a href="https://github.com/ChaliceForAuri/a2ui-svelte">GitHub</a>
+				·
+				<a href="https://www.npmjs.com/package/svelte-a2ui">npm</a>
+				·
+				<a href="https://a2ui.org">A2UI spec</a>
 			</p>
 		</div>
 		<div class="controls">
@@ -108,6 +122,17 @@
 		margin: 0;
 		color: var(--a2ui-color-text-muted);
 		max-width: 46ch;
+	}
+	.links {
+		margin-top: 0.375rem;
+		font-size: 0.8125rem;
+	}
+	.links a {
+		color: var(--a2ui-color-primary);
+		text-decoration: none;
+	}
+	.links a:hover {
+		text-decoration: underline;
 	}
 	.controls {
 		display: flex;
