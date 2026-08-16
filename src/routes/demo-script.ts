@@ -46,7 +46,7 @@ export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
 		updateComponents: {
 			surfaceId: SURFACE,
 			components: [
-				{ id: 'header_icon', component: 'Icon', name: 'calendar' },
+				{ id: 'header_icon', component: 'Icon', name: 'calendarToday' },
 				{
 					id: 'header_text',
 					component: 'Text',
