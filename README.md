@@ -29,6 +29,11 @@ There are official renderers for React, Angular, Lit and Flutter. The Svelte slo
 
 That's the whole integration. The agent streams JSONL; the surface fills in as it arrives.
 
+> **Need richer components?** [auri](https://chaliceforauri.github.io/auri/) ships ready-made
+> agent-facing catalogs for this renderer — dashboards, data tables, charts, approval flows — each
+> as a contract + prompt-pack + Svelte implementation, from the same maintainer. Watch an agent
+> build an ops console live on its front page.
+
 ---
 
 ## Why this instead of a chat widget
