@@ -403,6 +403,9 @@
 		gap: 0.6rem;
 	}
 	.msg {
+		/* Without this, a long feed squashes every card to nothing: flex items
+		   shrink by default, and the feed has a max height. */
+		flex: none;
 		border: 1px solid var(--a2ui-color-border);
 		border-left: 3px solid var(--a2ui-color-primary);
 		border-radius: var(--a2ui-radius-small);

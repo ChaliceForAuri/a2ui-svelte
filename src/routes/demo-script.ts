@@ -15,6 +15,13 @@ import { createEmitter, type Transport } from '$lib/transport/types.js';
 
 const SURFACE = 'demo';
 
+/** The bookable slots. The mock agent rewrites this list to mark a selection. */
+const SLOTS = [
+	{ time: '6:00 PM', table: 'Window' },
+	{ time: '7:30 PM', table: 'Patio' },
+	{ time: '9:00 PM', table: 'Bar' }
+];
+
 export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
 	{
 		version: 'v1.0',
@@ -30,11 +37,8 @@ export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
 				company: 'Bistro Verde',
 				contact: { firstName: '', lastName: '', email: '', preference: ['email'], subscribe: true },
 				partySize: 2,
-				slots: [
-					{ time: '6:00 PM', table: 'Window' },
-					{ time: '7:30 PM', table: 'Patio' },
-					{ time: '9:00 PM', table: 'Bar' }
-				]
+				selection: { time: '', table: '' },
+				slots: SLOTS.map((slot) => ({ ...slot, selected: false }))
 			}
 		}
 	},
@@ -163,15 +167,40 @@ export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
 					],
 					align: 'stretch'
 				},
-				{ id: 'slots_label', component: 'Text', text: 'Available tonight', variant: 'caption' },
+				{
+					id: 'slots_label',
+					component: 'Text',
+					text: 'Available tonight — pick a time',
+					variant: 'caption'
+				},
 				{
 					id: 'slot_list',
 					component: 'List',
 					direction: 'horizontal',
 					children: { path: '/slots', componentId: 'slot_card' }
 				},
-				{ id: 'slot_card', component: 'Card', child: 'slot_body' },
-				{ id: 'slot_body', component: 'Column', children: ['slot_time', 'slot_table'] },
+				{
+					id: 'slot_card',
+					component: 'Button',
+					child: 'slot_body',
+					// Relative paths and @index resolve against *this* item, so one
+					// component definition reports whichever slot was pressed.
+					action: {
+						event: {
+							name: 'select_slot',
+							context: {
+								time: { path: 'time' },
+								table: { path: 'table' },
+								index: { call: '@index' }
+							}
+						}
+					}
+				},
+				{
+					id: 'slot_body',
+					component: 'Column',
+					children: ['slot_time', 'slot_table', 'slot_mark']
+				},
 				{
 					id: 'slot_time',
 					// Relative path — resolves against the current /slots/N item.
@@ -183,6 +212,15 @@ export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
 					component: 'Text',
 					variant: 'caption',
 					text: { call: 'formatString', args: { value: '#${@index(offset: 1)} · ${table}' } }
+				},
+				{
+					id: 'slot_mark',
+					component: 'Text',
+					variant: 'caption',
+					text: 'Selected',
+					// A2UI has no equality function; the agent marks the chosen item
+					// in the data instead, and the template just reads it.
+					visible: { path: 'selected' }
 				},
 				{ id: 'divider', component: 'Divider', axis: 'horizontal' },
 				{
@@ -218,7 +256,9 @@ export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
 							context: {
 								partySize: { path: '/partySize' },
 								email: { path: '/contact/email' },
-								subscribed: { path: '/contact/subscribe' }
+								subscribed: { path: '/contact/subscribe' },
+								time: { path: '/selection/time' },
+								table: { path: '/selection/table' }
 							}
 						}
 					}
@@ -237,10 +277,22 @@ export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
  * `updateComponents` re-points `root` at a different tree — no page
  * navigation, no client-side routing, just data.
  */
-export function bookingResponse(action: RendererAction): (AgentToRenderer | { __pause: number })[] {
-	const context = (action.context ?? {}) as { partySize?: unknown; email?: unknown };
-	const partySize = Number(context.partySize ?? 2);
-	const email = String(context.email ?? '');
+function bookingResponse(action: RendererAction): (AgentToRenderer | { __pause: number })[] {
+	const context = (action.context ?? {}) as {
+		partySize?: unknown;
+		email?: unknown;
+		time?: unknown;
+		table?: unknown;
+	};
+	// Display fields take the value only when it is actually a string: coercing
+	// an unexpected payload would put "[object Object]" in front of the user.
+	const text = (value: unknown, fallback: string) =>
+		typeof value === 'string' && value.trim() !== '' ? value : fallback;
+	const size = Number(context.partySize);
+	const partySize = Number.isFinite(size) ? size : 2;
+	const email = text(context.email, 'your inbox');
+	const chosen = text(context.time, SLOTS[1]!.time);
+	const table = text(context.table, SLOTS[1]!.table);
 	const reference = `BV-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 
 	return [
@@ -250,7 +302,7 @@ export function bookingResponse(action: RendererAction): (AgentToRenderer | { __
 			updateDataModel: {
 				surfaceId: SURFACE,
 				path: '/booking',
-				value: { reference, partySize, email, time: '7:30 PM', table: 'Patio' }
+				value: { reference, partySize, email, time: chosen, table }
 			}
 		},
 		{ __pause: 350 },
@@ -308,6 +360,48 @@ export function bookingResponse(action: RendererAction): (AgentToRenderer | { __
 }
 
 /**
+ * Selecting a time is a round trip too — the agent decides what the choice
+ * means and writes it back. Marking the item in data (rather than sending new
+ * components) is what lets one template render three cards, one of them
+ * showing "Selected".
+ */
+function selectionResponse(action: RendererAction): AgentToRenderer[] {
+	const context = (action.context ?? {}) as { index?: unknown };
+	const index = Number(context.index);
+	// The index is the only part of the payload that decides anything; the slot
+	// itself comes from the agent's own list, so the marker and the booking can
+	// never disagree about which time was chosen.
+	const slot = Number.isInteger(index) ? SLOTS[index] : undefined;
+	if (!slot) return [];
+
+	return [
+		{
+			version: 'v1.0',
+			updateDataModel: {
+				surfaceId: SURFACE,
+				path: '/slots',
+				value: SLOTS.map((each, i) => ({ ...each, selected: i === index }))
+			}
+		},
+		{
+			version: 'v1.0',
+			updateDataModel: {
+				surfaceId: SURFACE,
+				path: '/selection',
+				value: { time: slot.time, table: slot.table }
+			}
+		}
+	];
+}
+
+/** How the mock agent answers each action the demo can produce. */
+export function agentResponse(action: RendererAction): (AgentToRenderer | { __pause: number })[] {
+	if (action.name === 'select_slot') return selectionResponse(action);
+	if (action.name === 'book_another') return DEMO_SCRIPT.slice(1);
+	return bookingResponse(action);
+}
+
+/**
  * Replays the script in the browser, honouring the pauses — the transport the
  * static demo runs on. Also a live example of how small a Transport is: it
  * answers actions the way the real agent does, so the round trip completes.
@@ -333,8 +427,7 @@ export function createDemoReplayTransport(): Transport {
 		send(message) {
 			const action = message.action;
 			if (!action) return;
-			// `book_another` restarts the script; anything else confirms the booking.
-			void play(action.name === 'book_another' ? DEMO_SCRIPT.slice(1) : bookingResponse(action));
+			void play(agentResponse(action));
 		},
 		close() {
 			cancelled = true;

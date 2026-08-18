@@ -14,7 +14,7 @@
 import type { RequestHandler } from './$types';
 import type { RendererToAgent } from '$lib/protocol/types.js';
 
-import { DEMO_SCRIPT, bookingResponse } from '../../demo-script.js';
+import { DEMO_SCRIPT, agentResponse } from '../../demo-script.js';
 
 /**
  * Open response streams, keyed by the caller's session so a reply reaches only
@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		const action = message.action;
 		if (action) {
-			const steps = action.name === 'book_another' ? DEMO_SCRIPT.slice(1) : bookingResponse(action);
+			const steps = agentResponse(action);
 			const session = sessionOf(request);
 			// Fire and forget: the reply lands on this session's open streams.
 			void (async () => {
