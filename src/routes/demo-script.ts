@@ -284,10 +284,15 @@ function bookingResponse(action: RendererAction): (AgentToRenderer | { __pause: 
 		time?: unknown;
 		table?: unknown;
 	};
-	const partySize = Number(context.partySize ?? 2);
-	const email = String(context.email ?? '');
-	const chosen = String(context.time ?? '') || SLOTS[1]!.time;
-	const table = String(context.table ?? '') || SLOTS[1]!.table;
+	// Display fields take the value only when it is actually a string: coercing
+	// an unexpected payload would put "[object Object]" in front of the user.
+	const text = (value: unknown, fallback: string) =>
+		typeof value === 'string' && value.trim() !== '' ? value : fallback;
+	const size = Number(context.partySize);
+	const partySize = Number.isFinite(size) ? size : 2;
+	const email = text(context.email, 'your inbox');
+	const chosen = text(context.time, SLOTS[1]!.time);
+	const table = text(context.table, SLOTS[1]!.table);
 	const reference = `BV-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 
 	return [
@@ -361,8 +366,13 @@ function bookingResponse(action: RendererAction): (AgentToRenderer | { __pause: 
  * showing "Selected".
  */
 function selectionResponse(action: RendererAction): AgentToRenderer[] {
-	const context = (action.context ?? {}) as { index?: unknown; time?: unknown; table?: unknown };
-	const index = Number(context.index ?? -1);
+	const context = (action.context ?? {}) as { index?: unknown };
+	const index = Number(context.index);
+	// The index is the only part of the payload that decides anything; the slot
+	// itself comes from the agent's own list, so the marker and the booking can
+	// never disagree about which time was chosen.
+	const slot = Number.isInteger(index) ? SLOTS[index] : undefined;
+	if (!slot) return [];
 
 	return [
 		{
@@ -370,7 +380,7 @@ function selectionResponse(action: RendererAction): AgentToRenderer[] {
 			updateDataModel: {
 				surfaceId: SURFACE,
 				path: '/slots',
-				value: SLOTS.map((slot, i) => ({ ...slot, selected: i === index }))
+				value: SLOTS.map((each, i) => ({ ...each, selected: i === index }))
 			}
 		},
 		{
@@ -378,7 +388,7 @@ function selectionResponse(action: RendererAction): AgentToRenderer[] {
 			updateDataModel: {
 				surfaceId: SURFACE,
 				path: '/selection',
-				value: { time: String(context.time ?? ''), table: String(context.table ?? '') }
+				value: { time: slot.time, table: slot.table }
 			}
 		}
 	];
