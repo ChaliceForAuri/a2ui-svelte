@@ -33,6 +33,10 @@
 	let seq = 0;
 	let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
+	// Identifies this browser to the dev mock agent (see api/agent/+server.ts).
+	const sessionId =
+		globalThis.crypto?.randomUUID?.() ?? `demo-${Math.random().toString(36).slice(2)}`;
+
 	// Declared after the state it touches: makeClient() reads `seq`/`feed`, so
 	// calling it any earlier hits the temporal dead zone during SSR.
 	let client = $state(makeClient());
@@ -65,7 +69,12 @@
 		const next = new A2uiClient({
 			transport: isStatic
 				? createDemoReplayTransport()
-				: createHttpTransport({ url: '/api/agent' }),
+				: // The header rides on both the stream request and outbound actions,
+					// so the mock agent replies to this browser only.
+					createHttpTransport({
+						url: '/api/agent',
+						headers: { 'x-demo-session': sessionId }
+					}),
 			supportedCatalogIds: catalog.ids,
 			// Every inbound envelope and every outbound action lands in the feed,
 			// so the wire and the pixels it produces sit side by side.

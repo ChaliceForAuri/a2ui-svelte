@@ -16,8 +16,15 @@ import type { RendererToAgent } from '$lib/protocol/types.js';
 
 import { DEMO_SCRIPT, bookingResponse } from '../../demo-script.js';
 
-/** Open response streams, so an inbound action can push UI back. Dev-only. */
-const listeners = new Set<(chunk: string) => void>();
+/**
+ * Open response streams, keyed by the caller's session so a reply reaches only
+ * the browser that acted — a module-global set would broadcast one visitor's
+ * booking (and their email) to every open stream. Dev-only mock agent.
+ */
+const listeners = new Map<string, Set<(chunk: string) => void>>();
+
+/** The demo page sends this on both the stream request and its actions. */
+const sessionOf = (request: Request) => request.headers.get('x-demo-session') ?? 'anonymous';
 
 export const POST: RequestHandler = async ({ request }) => {
 	// Renderer -> agent messages arrive on the same URL, tagged by content type.
@@ -28,7 +35,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		const action = message.action;
 		if (action) {
 			const steps = action.name === 'book_another' ? DEMO_SCRIPT.slice(1) : bookingResponse(action);
-			// Fire and forget: the reply lands on whatever streams are open.
+			const session = sessionOf(request);
+			// Fire and forget: the reply lands on this session's open streams.
 			void (async () => {
 				for (const step of steps) {
 					if ('__pause' in step) {
@@ -36,7 +44,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						continue;
 					}
 					const line = JSON.stringify(step) + '\n';
-					for (const send of listeners) send(line);
+					for (const send of listeners.get(session) ?? []) send(line);
 				}
 			})();
 		}
@@ -45,6 +53,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const encoder = new TextEncoder();
+	const session = sessionOf(request);
 
 	const stream = new ReadableStream<Uint8Array>({
 		async start(controller) {
@@ -52,12 +61,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			const send = (chunk: string) => {
 				if (!closed) controller.enqueue(encoder.encode(chunk));
 			};
-			listeners.add(send);
+			const forSession = listeners.get(session) ?? new Set();
+			forSession.add(send);
+			listeners.set(session, forSession);
 
 			const finish = () => {
 				if (closed) return;
 				closed = true;
-				listeners.delete(send);
+				forSession.delete(send);
+				if (forSession.size === 0) listeners.delete(session);
 				try {
 					controller.close();
 				} catch {
