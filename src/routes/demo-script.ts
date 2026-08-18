@@ -9,7 +9,7 @@
  * legal, and watching the buffering rule handle it is the point of the demo.
  */
 
-import type { AgentToRenderer } from '$lib/protocol/types.js';
+import type { AgentToRenderer, RendererAction } from '$lib/protocol/types.js';
 import { BASIC_CATALOG_ID } from '$lib/protocol/types.js';
 import { createEmitter, type Transport } from '$lib/transport/types.js';
 
@@ -229,29 +229,112 @@ export const DEMO_SCRIPT: (AgentToRenderer | { __pause: number })[] = [
 ];
 
 /**
+ * What the agent streams back when the user books.
+ *
+ * An action is a request, not a submission: the agent decides what happens
+ * next and answers with more UI. Here it replaces the form with a
+ * confirmation, which is also the clearest demonstration that
+ * `updateComponents` re-points `root` at a different tree — no page
+ * navigation, no client-side routing, just data.
+ */
+export function bookingResponse(action: RendererAction): (AgentToRenderer | { __pause: number })[] {
+	const context = (action.context ?? {}) as { partySize?: unknown; email?: unknown };
+	const partySize = Number(context.partySize ?? 2);
+	const email = String(context.email ?? '');
+	const reference = `BV-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+
+	return [
+		{ __pause: 550 },
+		{
+			version: 'v1.0',
+			updateDataModel: {
+				surfaceId: SURFACE,
+				path: '/booking',
+				value: { reference, partySize, email, time: '7:30 PM', table: 'Patio' }
+			}
+		},
+		{ __pause: 350 },
+		{
+			version: 'v1.0',
+			updateComponents: {
+				surfaceId: SURFACE,
+				components: [
+					// Re-pointing `root` swaps the whole surface. The form's components
+					// still exist; they are simply no longer reachable from the root.
+					{ id: 'root', component: 'Column', children: ['confirm_card'], align: 'stretch' },
+					{ id: 'confirm_card', component: 'Card', child: 'confirm_body' },
+					{
+						id: 'confirm_body',
+						component: 'Column',
+						children: ['confirm_head', 'confirm_detail', 'confirm_note', 'confirm_actions']
+					},
+					{ id: 'confirm_head', component: 'Row', children: ['confirm_icon', 'confirm_title'] },
+					{ id: 'confirm_icon', component: 'Icon', name: 'check' },
+					{ id: 'confirm_title', component: 'Text', text: "You're booked" },
+					{
+						id: 'confirm_detail',
+						component: 'Text',
+						text: {
+							call: 'formatString',
+							args: {
+								value:
+									'Table for ${/booking/partySize} at ${/booking/time} — ${/booking/table}. ' +
+									'Reference ${/booking/reference}.'
+							}
+						}
+					},
+					{
+						id: 'confirm_note',
+						component: 'Text',
+						variant: 'caption',
+						text: {
+							call: 'formatString',
+							args: { value: 'Confirmation sent to ${/booking/email}. See you tonight.' }
+						}
+					},
+					{ id: 'confirm_actions', component: 'Row', children: ['confirm_again'] },
+					{ id: 'confirm_again_label', component: 'Text', text: 'Book another table' },
+					{
+						id: 'confirm_again',
+						component: 'Button',
+						variant: 'primary',
+						child: 'confirm_again_label',
+						action: { event: { name: 'book_another' } }
+					}
+				]
+			}
+		}
+	];
+}
+
+/**
  * Replays the script in the browser, honouring the pauses — the transport the
- * static demo runs on. Also a live example of how small a Transport is.
+ * static demo runs on. Also a live example of how small a Transport is: it
+ * answers actions the way the real agent does, so the round trip completes.
  */
 export function createDemoReplayTransport(): Transport {
 	const emitter = createEmitter();
 	let cancelled = false;
 
-	return {
-		async start() {
-			for (const step of DEMO_SCRIPT) {
-				if (cancelled) return;
-				if ('__pause' in step) {
-					await new Promise((resolve) => setTimeout(resolve, step.__pause));
-					continue;
-				}
-				emitter.emit(step);
+	async function play(steps: (AgentToRenderer | { __pause: number })[]) {
+		for (const step of steps) {
+			if (cancelled) return;
+			if ('__pause' in step) {
+				await new Promise((resolve) => setTimeout(resolve, step.__pause));
+				continue;
 			}
-		},
+			emitter.emit(step);
+		}
+	}
+
+	return {
+		start: () => play(DEMO_SCRIPT),
 		subscribe: emitter.subscribe,
 		send(message) {
-			// No agent on the other side of a static page; the demo's action log
-			// (wired via onAction) is the visible result.
-			console.log('[demo] action (static mode, not delivered):', message);
+			const action = message.action;
+			if (!action) return;
+			// `book_another` restarts the script; anything else confirms the booking.
+			void play(action.name === 'book_another' ? DEMO_SCRIPT.slice(1) : bookingResponse(action));
 		},
 		close() {
 			cancelled = true;
