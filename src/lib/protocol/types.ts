@@ -29,6 +29,13 @@ export interface PathRef {
 
 export interface FunctionRef {
 	call: string;
+	/**
+	 * Which catalog defines the function, overriding the surface default
+	 * (`common_types.json#/$defs/FunctionCall`). Optional in general, but
+	 * REQUIRED inside `callRendererFunction`, where the agent must be explicit
+	 * about what it is asking the renderer to run.
+	 */
+	catalogId?: string;
 	args?: Record<string, unknown>;
 }
 
@@ -165,10 +172,16 @@ export interface AgentToRenderer {
 	updateDataModel?: UpdateDataModel;
 	deleteSurface?: DeleteSurface;
 	/**
-	 * v1.0's name for an agent invoking a renderer-registered function
-	 * (`agent_to_renderer.json#/$defs/CallRendererFunctionMessage`).
+	 * v1.0's shape for an agent invoking a renderer-registered function
+	 * (`agent_to_renderer.json#/$defs/CallRendererFunctionMessage`). Both the
+	 * correlation id and the call itself are NESTED here — the envelope carries
+	 * neither, and the object is `additionalProperties: false`.
 	 */
-	callRendererFunction?: FunctionRef;
+	callRendererFunction?: {
+		functionCallId: string;
+		/** `catalogId` is required on this FunctionCall, unlike elsewhere. */
+		callFunction: FunctionRef;
+	};
 	/**
 	 * @deprecated The candidate-draft name for `callRendererFunction`. Still
 	 * accepted — `reduce` normalizes it — but agents should send the v1.0 key.
@@ -229,11 +242,15 @@ export interface RendererAction {
 	actionId?: string;
 }
 
+/**
+ * `common_types.json#/$defs/FunctionResponse` — `additionalProperties: false`,
+ * with a `oneOf` requiring exactly one of `value` or `error`. It carries no
+ * echo of the function name; `functionCallId` is the only correlator.
+ */
 export interface RendererFunctionResponse {
 	functionCallId: string;
-	call: string;
 	value?: unknown;
-	error?: string;
+	error?: { code: string; message: string };
 }
 
 export interface RendererError {

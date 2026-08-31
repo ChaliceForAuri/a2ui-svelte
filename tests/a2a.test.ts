@@ -136,11 +136,13 @@ test('a v1.0 callRendererFunction is recognized as an A2UI envelope', () => {
 	 */
 	const call = {
 		version: 'v1.0',
-		functionCallId: 'c1',
-		callRendererFunction: { call: 'getScreenResolution' }
+		callRendererFunction: {
+			functionCallId: 'c1',
+			callFunction: { call: 'getScreenResolution', catalogId: 'https://example.com/catalog.json' }
+		}
 	};
 	const response = { version: 'v1.0', agentFunctionResponse: { value: 1 } };
 	const parts = extractA2uiParts([a2uiDataPart([call, response])]);
 	assert.equal(parts.length, 2, 'both v1.0 function messages must survive extraction');
-	assert.equal(parts[0]?.callRendererFunction?.call, 'getScreenResolution');
+	assert.equal(parts[0]?.callRendererFunction?.callFunction.call, 'getScreenResolution');
 });

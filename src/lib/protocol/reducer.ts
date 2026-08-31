@@ -195,17 +195,29 @@ export function reduce(
 	/* --------------------------------------------------- callRendererFunction */
 
 	/*
-	 * v1.0 names this `callRendererFunction`; an earlier candidate draft called
-	 * it `callFunction`, which is what this renderer shipped. The spec warns
-	 * that v1.0 is a Candidate and the repo moves daily, and this is what that
-	 * looks like in practice. The legacy key is still accepted so hosts and
-	 * agents built against the older draft keep working.
+	 * Two shapes, one behaviour.
+	 *
+	 * v1.0 (agent_to_renderer.json#/$defs/CallRendererFunctionMessage) nests
+	 * everything under the key and is `additionalProperties: false`:
+	 *   {callRendererFunction: {functionCallId, callFunction: {call, catalogId, args}}}
+	 * There is no envelope-level `functionCallId` and no `wantResponse` — the
+	 * renderer MUST always reply (protocol doc: "even if the function's return
+	 * type is void").
+	 *
+	 * The earlier candidate draft this renderer shipped put both at envelope
+	 * level and gated the reply on `wantResponse`. Renaming the key alone was
+	 * not enough: a schema-valid v1.0 message reached the reducer and was then
+	 * rejected for a missing top-level id, so it stayed uninteroperable while
+	 * looking fixed. A name is not a shape.
 	 */
-	const rendererCall = message.callRendererFunction ?? message.callFunction;
+	const canonicalCall = message.callRendererFunction;
+	const legacyCall = message.callFunction;
 
-	if (rendererCall) {
-		const { functionCallId, wantResponse } = message;
-		const ref = rendererCall;
+	if (canonicalCall || legacyCall) {
+		const functionCallId = canonicalCall ? canonicalCall.functionCallId : message.functionCallId;
+		const ref = canonicalCall ? canonicalCall.callFunction : legacyCall!;
+		// Canonical calls are always answered; legacy ones keep their opt-in.
+		const mustReply = canonicalCall ? true : message.wantResponse === true;
 
 		if (!functionCallId) {
 			return {
@@ -223,11 +235,16 @@ export function reduce(
 
 		try {
 			const value = callFunction(ref, ctx);
-			if (wantResponse) {
+			if (mustReply) {
 				outbound.push({
 					version: A2UI_VERSION,
-					// renderer_to_agent.json calls this `rendererFunctionResponse`.
-					rendererFunctionResponse: { functionCallId, call: ref.call, value }
+					/*
+					 * common_types.json#/$defs/FunctionResponse is
+					 * `additionalProperties: false` over {functionCallId, value, error}
+					 * with a oneOf demanding exactly one of value/error — so no `call`
+					 * echo, and a void return still needs an explicit value.
+					 */
+					rendererFunctionResponse: { functionCallId, value: value ?? null }
 				});
 			}
 		} catch (e) {
