@@ -176,12 +176,72 @@ test('agent callFunction of a rendererOnly builtin is rejected', () => {
 	assert.equal(outbound[0]?.error?.functionCallId, 'c1');
 });
 
-test('agent callFunction of a host-registered function returns functionResponse', () => {
-	const opts = {
-		functions: createFunctionRegistry({
-			getScreenResolution: { callableFrom: 'any' as const, run: () => ({ w: 1920, h: 1080 }) }
-		})
-	};
+const screenResolutionOpts = () => ({
+	functions: createFunctionRegistry({
+		getScreenResolution: { callableFrom: 'any' as const, run: () => ({ w: 1920, h: 1080 }) }
+	})
+});
+
+test('the canonical v1.0 callRendererFunction shape round-trips', () => {
+	/*
+	 * The whole message as a conformant agent sends it: id and call NESTED under
+	 * the key, catalogId present, and no envelope-level wantResponse. Renaming
+	 * the key without adopting this shape left the reducer rejecting valid
+	 * messages for a missing top-level id.
+	 */
+	const { outbound } = reduce(
+		INITIAL_STATE,
+		{
+			version: 'v1.0',
+			callRendererFunction: {
+				functionCallId: 'c9',
+				callFunction: {
+					call: 'getScreenResolution',
+					catalogId: 'https://example.com/catalog.json',
+					args: { screenIndex: 0 }
+				}
+			}
+		},
+		screenResolutionOpts()
+	);
+	// FunctionResponse is additionalProperties:false over {functionCallId,value,error}
+	// — no echo of the function name.
+	assert.deepEqual(outbound[0]?.rendererFunctionResponse, {
+		functionCallId: 'c9',
+		value: { w: 1920, h: 1080 }
+	});
+});
+
+test('a canonical call is answered even when the function returns nothing', () => {
+	// "The renderer MUST always send a corresponding response, even if the
+	// function's return type is void" — and FunctionResponse's oneOf demands
+	// exactly one of value/error, so void becomes an explicit null.
+	const { outbound } = reduce(
+		INITIAL_STATE,
+		{
+			version: 'v1.0',
+			callRendererFunction: {
+				functionCallId: 'c10',
+				callFunction: { call: 'ping', catalogId: 'https://example.com/catalog.json' }
+			}
+		},
+		{
+			functions: createFunctionRegistry({
+				ping: { callableFrom: 'any' as const, run: () => undefined }
+			})
+		}
+	);
+	assert.deepEqual(outbound[0]?.rendererFunctionResponse, { functionCallId: 'c10', value: null });
+});
+
+test('the legacy callFunction key is still accepted', () => {
+	/*
+	 * `callFunction` was the candidate-draft name this renderer shipped before
+	 * v1.0 settled on `callRendererFunction`. Agents built against the older
+	 * draft must keep working, so the legacy key is normalized rather than
+	 * dropped — but the REPLY is the v1.0 name either way, because that is what
+	 * a conformant agent parses.
+	 */
 	const { outbound } = reduce(
 		INITIAL_STATE,
 		{
@@ -190,13 +250,17 @@ test('agent callFunction of a host-registered function returns functionResponse'
 			wantResponse: true,
 			callFunction: { call: 'getScreenResolution', args: { screenIndex: 0 } }
 		},
-		opts
+		screenResolutionOpts()
 	);
-	assert.deepEqual(outbound[0]?.functionResponse, {
+	assert.deepEqual(outbound[0]?.rendererFunctionResponse, {
 		functionCallId: 'c9',
-		call: 'getScreenResolution',
 		value: { w: 1920, h: 1080 }
 	});
+	assert.equal(
+		(outbound[0] as unknown as Record<string, unknown>).functionResponse,
+		undefined,
+		'the pre-v1.0 outbound key must not be emitted'
+	);
 });
 
 test('callFunction without wantResponse stays silent', () => {

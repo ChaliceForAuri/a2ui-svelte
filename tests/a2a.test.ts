@@ -125,3 +125,24 @@ test('the transport pumps events to subscribers and wraps sends', async () => {
 	const outbound = posted[0] as { parts: { data: unknown[] }[] };
 	assert.equal(outbound.parts[0]!.data.length, 1);
 });
+
+test('a v1.0 callRendererFunction is recognized as an A2UI envelope', () => {
+	/*
+	 * Transports decide whether a payload is A2UI at all by looking for an
+	 * envelope key. When the list omitted `callRendererFunction`, a conformant
+	 * agent's function call was not a degraded message — it was an INVISIBLE
+	 * one, silently discarded here before the reducer could handle it. Both
+	 * transports shared the omission because both had their own copy of the list.
+	 */
+	const call = {
+		version: 'v1.0',
+		callRendererFunction: {
+			functionCallId: 'c1',
+			callFunction: { call: 'getScreenResolution', catalogId: 'https://example.com/catalog.json' }
+		}
+	};
+	const response = { version: 'v1.0', agentFunctionResponse: { value: 1 } };
+	const parts = extractA2uiParts([a2uiDataPart([call, response])]);
+	assert.equal(parts.length, 2, 'both v1.0 function messages must survive extraction');
+	assert.equal(parts[0]?.callRendererFunction?.callFunction.call, 'getScreenResolution');
+});
