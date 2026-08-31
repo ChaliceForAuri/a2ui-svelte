@@ -87,6 +87,11 @@ createAgUiTransport({ events, send })
 // streamed updates. Bring your own A2A client; this extracts and wraps.
 createA2aTransport({ events, send })
 
+// Serverless: no persistent stream, so each action's POST response IS the
+// agent's next batch of messages. Turns are serialised; a failed turn goes to
+// onTurnError rather than throwing inside the component that dispatched it.
+createHttpTransport({ url: '/api/agent', turnBased: true, onTurnError })
+
 // Offline: replay a fixture, optionally with a delay between messages.
 createMockTransport(messages, { delayMs: 300 })
 ```
