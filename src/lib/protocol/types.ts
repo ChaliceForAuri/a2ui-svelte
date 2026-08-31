@@ -154,19 +154,62 @@ export interface DeleteSurface {
 
 export interface AgentToRenderer {
 	version: string;
-	/** Correlation id for `callFunction`; lives at envelope level, not inside it. */
+	/** Correlation id for `callRendererFunction`; lives at envelope level, not inside it. */
 	functionCallId?: string;
 	wantResponse?: boolean;
-	/** Correlation id for `actionResponse`. */
+	/** Correlation id for `actionResponse` (non-spec, see below). */
 	actionId?: string;
 
 	createSurface?: CreateSurface;
 	updateComponents?: UpdateComponents;
 	updateDataModel?: UpdateDataModel;
 	deleteSurface?: DeleteSurface;
+	/**
+	 * v1.0's name for an agent invoking a renderer-registered function
+	 * (`agent_to_renderer.json#/$defs/CallRendererFunctionMessage`).
+	 */
+	callRendererFunction?: FunctionRef;
+	/**
+	 * @deprecated The candidate-draft name for `callRendererFunction`. Still
+	 * accepted — `reduce` normalizes it — but agents should send the v1.0 key.
+	 */
 	callFunction?: FunctionRef;
+	/**
+	 * NOT an A2UI v1.0 message. The v1.0 envelope is a `oneOf` over exactly
+	 * `createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`,
+	 * `callRendererFunction` and `agentFunctionResponse` — there is no
+	 * agent-side reply to a user action, because the spec's model is that the
+	 * agent simply sends `updateDataModel` at whatever path it wants written.
+	 *
+	 * Kept working for hosts already relying on it; do not build on it.
+	 */
 	actionResponse?: { value: unknown };
 }
+
+/**
+ * Every key that marks an object as an agent-to-renderer envelope.
+ *
+ * The v1.0 list (`agent_to_renderer.json` is a `oneOf` over exactly these) plus
+ * the pre-v1.0 aliases this renderer shipped. Transports use it to decide
+ * whether a payload is A2UI at all, so a key missing here is not a degraded
+ * message — it is an INVISIBLE one, dropped before the reducer ever sees it.
+ * That is what happened to `callRendererFunction`: the reducer would have
+ * handled it, but neither transport recognized it as A2UI.
+ *
+ * It lives here, once, because it was previously duplicated in both transports
+ * and drifted in both.
+ */
+export const ENVELOPE_KEYS = [
+	'createSurface',
+	'updateComponents',
+	'updateDataModel',
+	'deleteSurface',
+	'callRendererFunction',
+	'agentFunctionResponse',
+	// pre-v1.0 aliases, still accepted
+	'callFunction',
+	'actionResponse'
+] as const;
 
 /* -------------------------------------------------------------------------- */
 /* Renderer -> agent messages                                                 */
@@ -204,7 +247,12 @@ export interface RendererError {
 export interface RendererToAgent {
 	version: string;
 	action?: RendererAction;
-	functionResponse?: RendererFunctionResponse;
+	/**
+	 * v1.0's name for the reply to `callRendererFunction`
+	 * (`renderer_to_agent.json`, which is a `oneOf` over `action`,
+	 * `callAgentFunction`, `rendererFunctionResponse` and `error`).
+	 */
+	rendererFunctionResponse?: RendererFunctionResponse;
 	error?: RendererError;
 	/**
 	 * `a2uiRendererDataModel` is populated when a surface was created with

@@ -14,6 +14,7 @@
  * A2A values and how to *wrap* renderer messages back into A2A shape.
  */
 
+import { ENVELOPE_KEYS } from '../protocol/types.js';
 import type { AgentToRenderer, RendererToAgent } from '../protocol/types.js';
 import { createEmitter, type Transport } from './types.js';
 
@@ -30,15 +31,6 @@ export interface A2aDataPart {
 	metadata?: Record<string, unknown>;
 	[k: string]: unknown;
 }
-
-const ENVELOPE_KEYS = [
-	'createSurface',
-	'updateComponents',
-	'updateDataModel',
-	'deleteSurface',
-	'callFunction',
-	'actionResponse'
-];
 
 function isA2uiEnvelope(value: unknown): value is AgentToRenderer {
 	if (!value || typeof value !== 'object') return false;

@@ -176,12 +176,41 @@ test('agent callFunction of a rendererOnly builtin is rejected', () => {
 	assert.equal(outbound[0]?.error?.functionCallId, 'c1');
 });
 
-test('agent callFunction of a host-registered function returns functionResponse', () => {
-	const opts = {
-		functions: createFunctionRegistry({
-			getScreenResolution: { callableFrom: 'any' as const, run: () => ({ w: 1920, h: 1080 }) }
-		})
-	};
+const screenResolutionOpts = () => ({
+	functions: createFunctionRegistry({
+		getScreenResolution: { callableFrom: 'any' as const, run: () => ({ w: 1920, h: 1080 }) }
+	})
+});
+
+test('callRendererFunction returns a rendererFunctionResponse', () => {
+	// The v1.0 names on both halves of the round trip:
+	// agent_to_renderer.json -> callRendererFunction
+	// renderer_to_agent.json -> rendererFunctionResponse
+	const { outbound } = reduce(
+		INITIAL_STATE,
+		{
+			version: 'v1.0',
+			functionCallId: 'c9',
+			wantResponse: true,
+			callRendererFunction: { call: 'getScreenResolution', args: { screenIndex: 0 } }
+		},
+		screenResolutionOpts()
+	);
+	assert.deepEqual(outbound[0]?.rendererFunctionResponse, {
+		functionCallId: 'c9',
+		call: 'getScreenResolution',
+		value: { w: 1920, h: 1080 }
+	});
+});
+
+test('the legacy callFunction key is still accepted', () => {
+	/*
+	 * `callFunction` was the candidate-draft name this renderer shipped before
+	 * v1.0 settled on `callRendererFunction`. Agents built against the older
+	 * draft must keep working, so the legacy key is normalized rather than
+	 * dropped — but the REPLY is the v1.0 name either way, because that is what
+	 * a conformant agent parses.
+	 */
 	const { outbound } = reduce(
 		INITIAL_STATE,
 		{
@@ -190,13 +219,18 @@ test('agent callFunction of a host-registered function returns functionResponse'
 			wantResponse: true,
 			callFunction: { call: 'getScreenResolution', args: { screenIndex: 0 } }
 		},
-		opts
+		screenResolutionOpts()
 	);
-	assert.deepEqual(outbound[0]?.functionResponse, {
+	assert.deepEqual(outbound[0]?.rendererFunctionResponse, {
 		functionCallId: 'c9',
 		call: 'getScreenResolution',
 		value: { w: 1920, h: 1080 }
 	});
+	assert.equal(
+		(outbound[0] as unknown as Record<string, unknown>).functionResponse,
+		undefined,
+		'the pre-v1.0 outbound key must not be emitted'
+	);
 });
 
 test('callFunction without wantResponse stays silent', () => {

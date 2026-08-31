@@ -11,6 +11,7 @@
  * `extract` if your backend nests A2UI differently.
  */
 
+import { ENVELOPE_KEYS } from '../protocol/types.js';
 import type { AgentToRenderer, RendererToAgent } from '../protocol/types.js';
 import { applyPatch, type PatchOp } from './json-patch.js';
 import { createEmitter, type Transport } from './types.js';
@@ -58,15 +59,6 @@ export function defaultExtract(content: unknown): AgentToRenderer[] {
 	}
 	return isA2uiEnvelope(record) ? [record] : [];
 }
-
-const ENVELOPE_KEYS = [
-	'createSurface',
-	'updateComponents',
-	'updateDataModel',
-	'deleteSurface',
-	'callFunction',
-	'actionResponse'
-];
 
 function isA2uiEnvelope(value: unknown): value is AgentToRenderer {
 	if (!value || typeof value !== 'object') return false;

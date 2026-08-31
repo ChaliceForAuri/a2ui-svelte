@@ -192,16 +192,25 @@ export function reduce(
 		return { state: { surfaces, pendingActions }, outbound };
 	}
 
-	/* ----------------------------------------------------------- callFunction */
+	/* --------------------------------------------------- callRendererFunction */
 
-	if (message.callFunction) {
+	/*
+	 * v1.0 names this `callRendererFunction`; an earlier candidate draft called
+	 * it `callFunction`, which is what this renderer shipped. The spec warns
+	 * that v1.0 is a Candidate and the repo moves daily, and this is what that
+	 * looks like in practice. The legacy key is still accepted so hosts and
+	 * agents built against the older draft keep working.
+	 */
+	const rendererCall = message.callRendererFunction ?? message.callFunction;
+
+	if (rendererCall) {
 		const { functionCallId, wantResponse } = message;
-		const ref = message.callFunction;
+		const ref = rendererCall;
 
 		if (!functionCallId) {
 			return {
 				state,
-				outbound: [err('VALIDATION_FAILED', 'callFunction requires a functionCallId')]
+				outbound: [err('VALIDATION_FAILED', 'callRendererFunction requires a functionCallId')]
 			};
 		}
 
@@ -217,7 +226,8 @@ export function reduce(
 			if (wantResponse) {
 				outbound.push({
 					version: A2UI_VERSION,
-					functionResponse: { functionCallId, call: ref.call, value }
+					// renderer_to_agent.json calls this `rendererFunctionResponse`.
+					rendererFunctionResponse: { functionCallId, call: ref.call, value }
 				});
 			}
 		} catch (e) {
