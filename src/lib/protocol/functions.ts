@@ -7,6 +7,7 @@
  */
 
 import type { Scope } from './scope.js';
+import type { FunctionRef } from './types.js';
 
 export interface EvalContext {
 	/** The surface data model root. */
@@ -17,6 +18,22 @@ export interface EvalContext {
 	remote?: boolean;
 	/** Recursion guard, carried on the context so it survives re-entry. */
 	depth?: number;
+	/**
+	 * Values the agent has already returned for functions this renderer does not
+	 * implement, keyed by `agentCallKey`. Consulted before routing a call, so a
+	 * resolved agent function is indistinguishable from a local one.
+	 */
+	agentValues?: Readonly<Record<string, unknown>>;
+	/**
+	 * The spec's fallback routing (a2ui_protocol.md, `callAgentFunction`): a
+	 * function not registered locally is assumed to live on the agent and MUST
+	 * be dispatched, not dropped. Called with the ref and its RESOLVED args.
+	 *
+	 * This fires during evaluation, which happens during render — so an
+	 * implementation must not synchronously mutate reactive state here. The
+	 * client queues and flushes in a microtask for exactly that reason.
+	 */
+	onUnresolvedFunction?: (ref: FunctionRef, key: string) => void;
 }
 
 export interface FunctionImpl {

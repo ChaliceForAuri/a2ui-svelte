@@ -72,6 +72,28 @@ export function resolveDynamic(value: unknown, ctx: EvalContext): unknown {
 	return value;
 }
 
+/**
+ * A stable identity for one agent-side call: same function, same catalog, same
+ * RESOLVED arguments. Keys are canonical (object keys sorted) so two calls that
+ * differ only in property order dedupe onto one round trip rather than two.
+ */
+export function agentCallKey(ref: FunctionRef): string {
+	const canonical = (value: unknown): unknown => {
+		if (Array.isArray(value)) return value.map(canonical);
+		if (value && typeof value === 'object') {
+			const out: Record<string, unknown> = {};
+			for (const k of Object.keys(value as Record<string, unknown>).sort()) {
+				out[k] = canonical((value as Record<string, unknown>)[k]);
+			}
+			return out;
+		}
+		return value;
+	};
+	return JSON.stringify(
+		canonical({ call: ref.call, catalogId: ref.catalogId, args: ref.args ?? {} })
+	);
+}
+
 export function callFunction(ref: FunctionRef, ctx: EvalContext): unknown {
 	if ((ctx.depth ?? 0) > MAX_DEPTH) {
 		console.warn(`[a2ui] call depth exceeded resolving ${ref.call}`);
@@ -80,7 +102,25 @@ export function callFunction(ref: FunctionRef, ctx: EvalContext): unknown {
 
 	const impl = ctx.functions[ref.call];
 	if (!impl) {
-		console.warn(`[a2ui] unknown function: ${ref.call}`);
+		/*
+		 * Spec fallback routing: a name this renderer does not implement is an
+		 * AGENT function, not an error. Resolve its args here — the agent wants
+		 * values, not `{path}` refs — then answer from cache if the agent has
+		 * already replied, otherwise ask.
+		 */
+		const inner = { ...deeper(ctx), remote: false };
+		const args = (resolveDynamic(ref.args ?? {}, inner) ?? {}) as Record<string, unknown>;
+		const resolvedRef: FunctionRef = { call: ref.call, catalogId: ref.catalogId, args };
+		const key = agentCallKey(resolvedRef);
+
+		if (ctx.agentValues && key in ctx.agentValues) return ctx.agentValues[key];
+
+		if (ctx.onUnresolvedFunction) {
+			ctx.onUnresolvedFunction(resolvedRef, key);
+		} else {
+			// No route to an agent (a pure evaluation, or a host that opted out).
+			console.warn(`[a2ui] unknown function: ${ref.call}`);
+		}
 		return undefined;
 	}
 	if (ctx.remote && (impl.callableFrom ?? 'rendererOnly') === 'rendererOnly') {

@@ -188,6 +188,16 @@ export interface AgentToRenderer {
 	 */
 	callFunction?: FunctionRef;
 	/**
+	 * The agent's reply to a `callAgentFunction` this renderer dispatched
+	 * (`agent_to_renderer.json#/$defs/AgentFunctionResponseMessage`). Carries
+	 * exactly one of `value` or `error`.
+	 */
+	agentFunctionResponse?: {
+		functionCallId: string;
+		value?: unknown;
+		error?: { code: string; message: string };
+	};
+	/**
 	 * NOT an A2UI v1.0 message. The v1.0 envelope is a `oneOf` over exactly
 	 * `createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`,
 	 * `callRendererFunction` and `agentFunctionResponse` — there is no
@@ -264,6 +274,15 @@ export interface RendererError {
 export interface RendererToAgent {
 	version: string;
 	action?: RendererAction;
+	/**
+	 * Renderer-initiated call to a function that lives on the agent, dispatched
+	 * when a name is not registered locally (the spec's fallback routing).
+	 */
+	callAgentFunction?: {
+		surfaceId: string;
+		functionCallId: string;
+		callFunction: FunctionRef;
+	};
 	/**
 	 * v1.0's name for the reply to `callRendererFunction`
 	 * (`renderer_to_agent.json`, which is a `oneOf` over `action`,

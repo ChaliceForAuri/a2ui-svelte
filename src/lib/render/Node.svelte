@@ -39,7 +39,15 @@
 	const ctx: EvalContext = $derived({
 		data: surface?.dataModel,
 		scope,
-		functions: rc.catalog.functions
+		functions: rc.catalog.functions,
+		/*
+		 * Agent-side function routing. `agentValues` holds what the agent has
+		 * already answered; `onUnresolvedFunction` asks for what it has not. The
+		 * client queues these and flushes on a microtask — this fires mid-render,
+		 * so it must not write reactive state synchronously.
+		 */
+		agentValues: surface?.agentValues,
+		onUnresolvedFunction: (ref, key) => rc.client.requestAgentFunction(rc.surfaceId, ref, key)
 	});
 
 	const handlers = {
