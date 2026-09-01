@@ -310,3 +310,57 @@ test('visible defaults to true and only an explicit false hides the node', () =>
 		'undefined is not an explicit false'
 	);
 });
+
+/* ------------------------------------------- pending agent-backed values */
+
+test('a prop waiting on the agent is named, and only that prop', () => {
+	/*
+	 * A value routed to the agent is a third state: not absent, not resolved.
+	 * Without naming it, an agent-backed prop renders empty and then pops, and
+	 * the component cannot tell that apart from "the agent sent nothing". The
+	 * attribution has to be per-PROP — a skeleton over the whole node when one
+	 * field is late is nearly as bad as no skeleton at all.
+	 */
+	const ctx: EvalContext = {
+		data: { known: 'here' },
+		scope: ROOT_SCOPE,
+		functions: createFunctionRegistry({}),
+		onUnresolvedFunction: () => {}
+	};
+	const spec = {
+		id: 'n1',
+		component: 'Stat',
+		label: 'Stock',
+		caption: { path: '/known' },
+		value: { call: 'stockLevel', args: { sku: 'A-1' } }
+	} as unknown as ComponentSpec;
+
+	const built = buildNodeProps(spec, { component: STUB }, ctx, {
+		setData: () => {},
+		dispatch: () => {}
+	});
+
+	assert.deepEqual([...built.pending], ['value']);
+	assert.equal(built.props.caption, 'here', 'resolved props are untouched');
+	assert.equal(built.props.label, 'Stock', 'literal props are untouched');
+});
+
+test('nothing is pending when there is no route to an agent', () => {
+	// A pure evaluation must not claim to be waiting on anything.
+	const ctx: EvalContext = {
+		data: {},
+		scope: ROOT_SCOPE,
+		functions: createFunctionRegistry({})
+	};
+	const spec = {
+		id: 'n1',
+		component: 'Stat',
+		value: { call: 'stockLevel' }
+	} as unknown as ComponentSpec;
+
+	const built = buildNodeProps(spec, { component: STUB }, ctx, {
+		setData: () => {},
+		dispatch: () => {}
+	});
+	assert.equal(built.pending.size, 0);
+});

@@ -54,7 +54,18 @@ export interface A2uiComponentProps {
 	actions: Record<string, () => void>;
 	validation: ValidationResult;
 	/** Escape hatch for custom components that need the raw wire spec. */
-	a2ui: { id: string; component: string; spec: ComponentSpec; scope: Scope };
+	a2ui: {
+		id: string;
+		component: string;
+		spec: ComponentSpec;
+		scope: Scope;
+		/**
+		 * Names of props still waiting on an agent round trip — a value that is
+		 * neither absent nor resolved. Show a skeleton for these rather than an
+		 * empty string, or an agent-backed value flashes blank and then pops.
+		 */
+		pending: ReadonlySet<string>;
+	};
 	[key: string]: unknown;
 }
 
