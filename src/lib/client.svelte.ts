@@ -12,6 +12,7 @@ import { setPointer } from './protocol/pointer.js';
 import type { Scope } from './protocol/scope.js';
 import { ROOT_SCOPE } from './protocol/scope.js';
 import {
+	agentCallKey,
 	callFunction,
 	createFunctionRegistry,
 	resolveDynamic,
@@ -24,6 +25,7 @@ import {
 	rendererCapabilitiesMetadata,
 	reduce,
 	trackPendingAction,
+	trackPendingFunctionCall,
 	type ClientState,
 	type SurfaceState
 } from './protocol/reducer.js';
@@ -33,6 +35,7 @@ import {
 	isFunctionCallAction,
 	type Action,
 	type AgentToRenderer,
+	type FunctionRef,
 	type RendererAction,
 	type RendererToAgent
 } from './protocol/types.js';
@@ -124,8 +127,63 @@ export class A2uiClient {
 		return {
 			data: this.#state.surfaces[surfaceId]?.dataModel,
 			scope,
-			functions: this.functions
+			functions: this.functions,
+			agentValues: this.#state.surfaces[surfaceId]?.agentValues,
+			onUnresolvedFunction: (ref, key) => this.#queueAgentCall(surfaceId, ref, key)
 		};
+	}
+
+	/* ------------------------------------------- agent-side function routing */
+
+	/*
+	 * A plain Map, deliberately NOT reactive state. `onUnresolvedFunction` fires
+	 * from inside `resolveDynamic`, which runs during render; writing reactive
+	 * state there re-enters the effect that is currently reading it and trips
+	 * `effect_update_depth_exceeded`. So requests are collected here and flushed
+	 * on a microtask, after the render that discovered them has finished.
+	 */
+	#queuedAgentCalls = new Map<string, { surfaceId: string; ref: FunctionRef }>();
+	#flushScheduled = false;
+
+	/**
+	 * Route a function the renderer does not implement to the agent. Public
+	 * because the render layer builds its own `EvalContext` per node — this is
+	 * the hook it passes as `onUnresolvedFunction`.
+	 */
+	requestAgentFunction(surfaceId: string, ref: FunctionRef, key: string): void {
+		this.#queueAgentCall(surfaceId, ref, key);
+	}
+
+	#queueAgentCall(surfaceId: string, ref: FunctionRef, key: string): void {
+		// Already asked and still waiting: one round trip, not one per render.
+		for (const pending of Object.values(this.#state.pendingFunctionCalls)) {
+			if (pending.key === key && pending.surfaceId === surfaceId) return;
+		}
+		this.#queuedAgentCalls.set(`${surfaceId}\u0000${key}`, { surfaceId, ref });
+		if (this.#flushScheduled) return;
+		this.#flushScheduled = true;
+		queueMicrotask(() => this.#flushAgentCalls());
+	}
+
+	#flushAgentCalls(): void {
+		this.#flushScheduled = false;
+		const queued = [...this.#queuedAgentCalls.entries()];
+		this.#queuedAgentCalls.clear();
+
+		for (const [composite, { surfaceId, ref }] of queued) {
+			const key = composite.slice(composite.indexOf('\u0000') + 1);
+			const surface = this.#state.surfaces[surfaceId];
+			// The surface may have been deleted, or the value may have arrived,
+			// between queueing and this flush.
+			if (!surface || key in surface.agentValues) continue;
+
+			const functionCallId = (this.#options.newId ?? defaultNewId)();
+			this.#state = trackPendingFunctionCall(this.#state, functionCallId, { surfaceId, key });
+			this.#send({
+				version: A2UI_VERSION,
+				callAgentFunction: { surfaceId, functionCallId, callFunction: ref }
+			});
+		}
 	}
 
 	/* ---------------------------------------------------------------- writes */

@@ -4,6 +4,7 @@ import {
 	INITIAL_STATE,
 	reduce,
 	trackPendingAction,
+	trackPendingFunctionCall,
 	rendererDataModelMetadata,
 	rendererCapabilitiesMetadata
 } from '../src/lib/protocol/reducer.ts';
@@ -333,4 +334,83 @@ test('rendererCapabilitiesMetadata matches the renderer_capabilities.json shape'
 			}
 		}
 	});
+});
+
+/* --------------------------------------------- agentFunctionResponse */
+
+const SURFACE_WITH_PENDING = () => {
+	const { state } = reduce(
+		INITIAL_STATE,
+		{
+			version: 'v1.0',
+			createSurface: {
+				surfaceId: 's1',
+				components: [{ id: 'root', component: 'Text', text: 'hi' }]
+			}
+		},
+		options
+	);
+	return trackPendingFunctionCall(state, 'fc-1', { surfaceId: 's1', key: 'K' });
+};
+
+test('agentFunctionResponse caches the value and clears the pending call', () => {
+	const { state } = reduce(
+		SURFACE_WITH_PENDING(),
+		{
+			version: 'v1.0',
+			agentFunctionResponse: { functionCallId: 'fc-1', value: { inStock: true } }
+		},
+		options
+	);
+	assert.deepEqual(state.surfaces.s1?.agentValues, { K: { inStock: true } });
+	assert.deepEqual(state.pendingFunctionCalls, {});
+});
+
+test('an agent function error is cached too, so it is not re-asked forever', () => {
+	/*
+	 * The spec has the agent answer UNKNOWN_FUNCTION for a name it does not
+	 * recognise. If the failure were not cached, the next render would find the
+	 * value still missing and dispatch again — a request loop for as long as the
+	 * component is on screen.
+	 */
+	const { state } = reduce(
+		SURFACE_WITH_PENDING(),
+		{
+			version: 'v1.0',
+			agentFunctionResponse: {
+				functionCallId: 'fc-1',
+				error: { code: 'UNKNOWN_FUNCTION', message: 'no such function' }
+			}
+		},
+		options
+	);
+	assert.ok('K' in (state.surfaces.s1?.agentValues ?? {}), 'the failure must occupy the slot');
+	assert.equal(state.surfaces.s1?.agentValues.K, undefined);
+	assert.deepEqual(state.pendingFunctionCalls, {});
+});
+
+test('a response for an unknown functionCallId is ignored, not fatal', () => {
+	const before = SURFACE_WITH_PENDING();
+	const { state } = reduce(
+		before,
+		{
+			version: 'v1.0',
+			agentFunctionResponse: { functionCallId: 'nope', value: 1 }
+		},
+		options
+	);
+	assert.deepEqual(state.pendingFunctionCalls, before.pendingFunctionCalls);
+});
+
+test('deleting a surface drops its in-flight function calls', () => {
+	// A reply arriving after teardown has nowhere to land.
+	const { state } = reduce(
+		SURFACE_WITH_PENDING(),
+		{
+			version: 'v1.0',
+			deleteSurface: { surfaceId: 's1' }
+		},
+		options
+	);
+	assert.deepEqual(state.pendingFunctionCalls, {});
 });

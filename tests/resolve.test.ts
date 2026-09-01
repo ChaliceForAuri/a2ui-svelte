@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+	agentCallKey,
 	createFunctionRegistry,
 	resolveDynamic,
 	evaluateExpression
@@ -149,4 +150,67 @@ test('deeply self-referential registries bottom out instead of hanging', () => {
 	assert.doesNotThrow(() =>
 		resolveDynamic({ call: 'loop' }, { data, scope: ROOT_SCOPE, functions })
 	);
+});
+
+/* --------------------------------------------- agent-side function routing */
+
+test('an unregistered function is routed to the agent, not dropped', () => {
+	/*
+	 * The spec's fallback routing: local lookup first, and a name this renderer
+	 * does not implement is assumed to be an AGENT function. Before this, the
+	 * renderer warned and returned undefined, so any catalog declaring an
+	 * agent-side function rendered a hole in silence.
+	 */
+	const routed: { call: string; args: unknown }[] = [];
+	const ctx: EvalContext = {
+		data: { order: { id: 'ord-7' } },
+		scope: ROOT_SCOPE,
+		functions: createFunctionRegistry({}),
+		onUnresolvedFunction: (ref) => routed.push({ call: ref.call, args: ref.args })
+	};
+
+	const value = resolveDynamic(
+		{ call: 'checkInventory', args: { id: { path: '/order/id' } } },
+		ctx
+	);
+
+	assert.equal(value, undefined, 'nothing to show until the agent answers');
+	assert.equal(routed.length, 1);
+	assert.equal(routed[0]?.call, 'checkInventory');
+	// Args reach the agent RESOLVED — it wants values, not our {path} refs.
+	assert.deepEqual(routed[0]?.args, { id: 'ord-7' });
+});
+
+test('a value the agent already returned resolves like a local function', () => {
+	const ref = { call: 'checkInventory', args: { id: 'ord-7' } };
+	let asked = 0;
+	const ctx: EvalContext = {
+		data: {},
+		scope: ROOT_SCOPE,
+		functions: createFunctionRegistry({}),
+		agentValues: { [agentCallKey(ref)]: { inStock: true } },
+		onUnresolvedFunction: () => asked++
+	};
+
+	assert.deepEqual(resolveDynamic(ref, ctx), { inStock: true });
+	assert.equal(asked, 0, 'a cached value must not re-ask the agent');
+});
+
+test('call identity ignores argument order, so one call is one round trip', () => {
+	// Two objects, same meaning, different key order — they must dedupe.
+	assert.equal(
+		agentCallKey({ call: 'f', args: { b: 2, a: 1 } }),
+		agentCallKey({ call: 'f', args: { a: 1, b: 2 } })
+	);
+	// But a different catalog is a different function.
+	assert.notEqual(
+		agentCallKey({ call: 'f', catalogId: 'x', args: {} }),
+		agentCallKey({ call: 'f', catalogId: 'y', args: {} })
+	);
+});
+
+test('without a route to an agent, an unknown function still just returns undefined', () => {
+	// Pure evaluation (no client attached) must not throw.
+	const ctx: EvalContext = { data: {}, scope: ROOT_SCOPE, functions: createFunctionRegistry({}) };
+	assert.equal(resolveDynamic({ call: 'nope' }, ctx), undefined);
 });

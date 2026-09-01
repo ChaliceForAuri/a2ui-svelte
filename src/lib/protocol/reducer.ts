@@ -31,6 +31,13 @@ export interface SurfaceState {
 	components: Readonly<Record<ComponentId, ComponentSpec>>;
 	dataModel: unknown;
 	/**
+	 * Values returned by the agent for functions this renderer does not
+	 * implement, keyed by `agentCallKey`. Per-surface so `deleteSurface` drops
+	 * them without extra bookkeeping, and so two surfaces cannot read each
+	 * other's results.
+	 */
+	agentValues: Readonly<Record<string, unknown>>;
+	/**
 	 * Components are buffered until `root` exists — before that, updates are
 	 * accepted but nothing is painted.
 	 */
@@ -42,14 +49,23 @@ export interface PendingAction {
 	responsePath?: string;
 }
 
+export interface PendingFunctionCall {
+	surfaceId: string;
+	/** `agentCallKey` of the call, so the reply lands in the right cache slot. */
+	key: string;
+}
+
 export interface ClientState {
 	surfaces: Readonly<Record<string, SurfaceState>>;
 	pendingActions: Readonly<Record<string, PendingAction>>;
+	/** In-flight `callAgentFunction`s, by `functionCallId`. */
+	pendingFunctionCalls: Readonly<Record<string, PendingFunctionCall>>;
 }
 
 export const INITIAL_STATE: ClientState = Object.freeze({
 	surfaces: Object.freeze({}),
-	pendingActions: Object.freeze({})
+	pendingActions: Object.freeze({}),
+	pendingFunctionCalls: Object.freeze({})
 });
 
 export interface ReduceOptions {
@@ -117,6 +133,7 @@ export function reduce(
 			sendDataModel: Boolean(sendDataModel),
 			components: map,
 			dataModel: dataModel ?? {},
+			agentValues: {},
 			ready: Object.prototype.hasOwnProperty.call(map, ROOT_COMPONENT_ID)
 		};
 
@@ -183,13 +200,18 @@ export function reduce(
 		const surfaces = { ...state.surfaces };
 		delete surfaces[surfaceId];
 
-		// Drop any actions that were still waiting on this surface.
+		// Drop anything still waiting on this surface — actions and function calls
+		// alike. A reply arriving after teardown has nowhere to land.
 		const pendingActions: Record<string, PendingAction> = {};
 		for (const [id, p] of Object.entries(state.pendingActions)) {
 			if (p.surfaceId !== surfaceId) pendingActions[id] = p;
 		}
+		const pendingFunctionCalls: Record<string, PendingFunctionCall> = {};
+		for (const [id, p] of Object.entries(state.pendingFunctionCalls)) {
+			if (p.surfaceId !== surfaceId) pendingFunctionCalls[id] = p;
+		}
 
-		return { state: { surfaces, pendingActions }, outbound };
+		return { state: { surfaces, pendingActions, pendingFunctionCalls }, outbound };
 	}
 
 	/* --------------------------------------------------- callRendererFunction */
@@ -258,6 +280,52 @@ export function reduce(
 		return { state, outbound };
 	}
 
+	/* --------------------------------------------------- agentFunctionResponse */
+
+	/*
+	 * The agent's reply to a `callAgentFunction` we dispatched because the
+	 * function was not registered locally. Correlate by `functionCallId`, then
+	 * write the value into the surface's cache under the call's key — the next
+	 * evaluation reads it there and the value simply appears.
+	 */
+	if (message.agentFunctionResponse) {
+		const { functionCallId, value, error } = message.agentFunctionResponse;
+		const pending = state.pendingFunctionCalls[functionCallId];
+
+		if (!pending) {
+			// Late, duplicated, or for a surface that has since been deleted.
+			console.warn(`[a2ui] agentFunctionResponse for unknown functionCallId ${functionCallId}`);
+			return { state, outbound };
+		}
+
+		const pendingFunctionCalls = { ...state.pendingFunctionCalls };
+		delete pendingFunctionCalls[functionCallId];
+
+		const surface = state.surfaces[pending.surfaceId];
+		if (!surface) return { state: { ...state, pendingFunctionCalls }, outbound };
+
+		/*
+		 * An error is cached too, as undefined. Without that the call is retried
+		 * on every single render — the spec has the agent answer UNKNOWN_FUNCTION
+		 * for a name it does not recognise, and re-asking forever is worse than
+		 * rendering nothing.
+		 */
+		if (error) {
+			console.warn(`[a2ui] agent function failed: ${error.code} ${error.message}`);
+		}
+
+		const agentValues = { ...surface.agentValues, [pending.key]: error ? undefined : value };
+
+		return {
+			state: {
+				...state,
+				surfaces: { ...state.surfaces, [surface.surfaceId]: { ...surface, agentValues } },
+				pendingFunctionCalls
+			},
+			outbound
+		};
+	}
+
 	/* --------------------------------------------------------- actionResponse */
 
 	if (message.actionResponse) {
@@ -291,6 +359,7 @@ export function reduce(
 
 		return {
 			state: {
+				...state,
 				surfaces: { ...state.surfaces, [surface.surfaceId]: { ...surface, dataModel } },
 				pendingActions
 			},
@@ -351,6 +420,18 @@ export function trackPendingAction(
 	pending: PendingAction
 ): ClientState {
 	return { ...state, pendingActions: { ...state.pendingActions, [actionId]: pending } };
+}
+
+/** Record a dispatched `callAgentFunction` so its reply can be correlated. */
+export function trackPendingFunctionCall(
+	state: ClientState,
+	functionCallId: string,
+	pending: PendingFunctionCall
+): ClientState {
+	return {
+		...state,
+		pendingFunctionCalls: { ...state.pendingFunctionCalls, [functionCallId]: pending }
+	};
 }
 
 /**
