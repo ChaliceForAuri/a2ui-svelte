@@ -84,6 +84,6 @@
 		bindings={built.bindings}
 		actions={built.actions}
 		validation={built.validation}
-		a2ui={{ id, component: spec.component, spec, scope }}
+		a2ui={{ id, component: spec.component, spec, scope, pending: built.pending }}
 	/>
 {/if}

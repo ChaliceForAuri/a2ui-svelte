@@ -41,6 +41,17 @@ export interface NodeHandlers {
 export interface BuiltNode {
 	/** `false` when a `visible` binding evaluates falsy — render nothing. */
 	visible: boolean;
+	/**
+	 * Props whose value is waiting on an agent round trip.
+	 *
+	 * A value routed to the agent is a THIRD state: not absent, not resolved,
+	 * but on its way. Without naming it, every agent-backed prop renders as
+	 * empty and then pops when the reply lands — which reads as a bug to a user
+	 * and is indistinguishable from "the agent sent nothing" to a component.
+	 * Components use this to show a skeleton for exactly the prop that is
+	 * waiting, rather than for the whole node.
+	 */
+	pending: ReadonlySet<string>;
 	props: Record<string, unknown>;
 	slots: Record<string, SlotContent>;
 	bindings: Record<string, Binding>;
@@ -61,7 +72,24 @@ export function buildNodeProps(
 	const rawKeys = new Set(entry.raw ?? []);
 
 	const props: Record<string, unknown> = {};
+	const pending = new Set<string>();
 	const slots: Record<string, SlotContent> = {};
+
+	/*
+	 * Per-prop context, so an unresolved agent call is attributed to the prop
+	 * that triggered it. Only built when a route to the agent exists — this runs
+	 * for every prop of every node on every render.
+	 */
+	const forProp = (key: string): EvalContext =>
+		ctx.onUnresolvedFunction
+			? {
+					...ctx,
+					onUnresolvedFunction: (ref, callKey) => {
+						pending.add(key);
+						ctx.onUnresolvedFunction?.(ref, callKey);
+					}
+				}
+			: ctx;
 	const bindings: Record<string, Binding> = {};
 	const actions: Record<string, () => void> = {};
 
@@ -88,7 +116,7 @@ export function buildNodeProps(
 			continue;
 		}
 
-		props[key] = rawKeys.has(key) ? value : resolveDynamic(value, ctx);
+		props[key] = rawKeys.has(key) ? value : resolveDynamic(value, forProp(key));
 	}
 
 	const validation = evaluateChecks(spec.checks as CheckRule[] | undefined, ctx);
@@ -96,7 +124,7 @@ export function buildNodeProps(
 	// `visible` defaults to true; only an explicit falsy resolution hides a node.
 	const visible = spec.visible === undefined ? true : props.visible !== false;
 
-	return { visible, props, slots, bindings, actions, validation };
+	return { visible, pending, props, slots, bindings, actions, validation };
 }
 
 /* -------------------------------------------------------------------------- */

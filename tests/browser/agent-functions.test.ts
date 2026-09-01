@@ -3,6 +3,8 @@ import { render } from 'vitest-browser-svelte';
 import { A2uiClient } from '../../src/lib/client.svelte.js';
 import Surface from '../../src/lib/render/Surface.svelte';
 import type { RendererToAgent } from '../../src/lib/protocol/types.js';
+import { buildNodeProps } from '../../src/lib/render/props.js';
+import { ROOT_SCOPE } from '../../src/lib/protocol/scope.js';
 import { catalog, SURFACE } from './helpers.js';
 
 /**
@@ -114,3 +116,57 @@ test('a surface torn down mid-flight does not strand the reply', async () => {
 	await settle();
 	expect(client.surfaceIds).not.toContain(SURFACE);
 });
+
+test('pending clears once the agent answers', async () => {
+	/*
+	 * The lifecycle, not just the flag: a prop is pending while the round trip is
+	 * in flight and NOT pending afterwards. A flag that is set but never cleared
+	 * leaves a permanent skeleton over a value that already arrived.
+	 */
+	const { client, sent } = clientWithCapturedOutbound();
+	await render(Surface, { props: { client, catalog, surfaceId: SURFACE } });
+
+	client.ingest({
+		version: 'v1.0',
+		createSurface: {
+			surfaceId: SURFACE,
+			components: [{ id: 'root', component: 'Text', text: { call: 'stockLabel', args: {} } }]
+		}
+	});
+	await settle();
+
+	const pendingWhileWaiting = buildFor(client).pending;
+	expect([...pendingWhileWaiting]).toContain('text');
+
+	const call = sent.find((m) => m.callAgentFunction)!;
+	client.ingest({
+		version: 'v1.0',
+		agentFunctionResponse: {
+			functionCallId: call.callAgentFunction!.functionCallId,
+			value: 'In stock'
+		}
+	});
+	await settle();
+
+	const after = buildFor(client);
+	expect([...after.pending]).toEqual([]);
+	expect(after.props.text).toBe('In stock');
+});
+
+/** Rebuild the root node's props the way the renderer does, to inspect them. */
+function buildFor(client: A2uiClient) {
+	const surface = client.surface(SURFACE)!;
+	const spec = surface.components.root;
+	return buildNodeProps(
+		spec,
+		{ component: (() => {}) as never },
+		{
+			data: surface.dataModel,
+			scope: ROOT_SCOPE,
+			functions: catalog.functions,
+			agentValues: surface.agentValues,
+			onUnresolvedFunction: (ref, key) => client.requestAgentFunction(SURFACE, ref, key)
+		},
+		{ setData: () => {}, dispatch: () => {} }
+	);
+}
