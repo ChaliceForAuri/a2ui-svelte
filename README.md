@@ -225,7 +225,7 @@ npm run package      # svelte-package + publint
 
 `0.2.0`. The protocol and render layers are covered by 103 tests on `node --test` — including a replay of the specification's own contact-form fixture — and the components by 23 more in real Chromium. `svelte-check` is clean, `publint` passes, and CI runs all of it on every push.
 
-Listed as the Svelte 5 community renderer on A2UI's ecosystem page. The spec's v1.0 is still a Candidate (finalize target Q4 2026) and the wire is re-verified against `specification/v1_0/` as it moves; the one known gap is inline catalogs, which are not implemented.
+Listed as the Svelte 5 community renderer on A2UI's ecosystem page. The spec's v1.0 is still a Candidate (finalize target Q4 2026) and the wire is re-verified against `specification/v1_0/` as it moves; two known conformance gaps remain: inline catalogs are not implemented, and catalog resolution defaults to a lenient name search across catalogs rather than the spec-mandated `catalogId` → surface default → error. Pass `{ strict: true }` to `createCatalogRegistry` for the strict rule.
 
 ## License
 

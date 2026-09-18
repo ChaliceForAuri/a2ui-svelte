@@ -16,7 +16,8 @@ is a wire fix, so 0.2.0 supersedes 0.1.0 for anything using function calls.
   `callRendererFunction` and `agentFunctionResponse`; `renderer_to_agent.json` over `action`,
   `callAgentFunction`, `rendererFunctionResponse` and `error`. The four UI messages were always
   correct, so rendering was never affected — only the function-call half, which failed silently.
-  The draft names are still accepted on input and never emitted.
+  The draft request name `callFunction` is still accepted on input and normalized; the draft
+  response name `functionResponse` was renderer _output_ and is simply never emitted again.
 
 ### Added
 

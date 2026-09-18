@@ -24,11 +24,15 @@ this code is touched:
 - Agent → renderer is a `oneOf` over `createSurface`, `updateComponents`, `updateDataModel`,
   `deleteSurface`, `callRendererFunction` and `agentFunctionResponse`. Renderer → agent is `action`,
   `callAgentFunction`, `rendererFunctionResponse` and `error`.
-- `functionCallId` lives at the envelope level, not inside the function reference, and is the only
-  correlator — `FunctionResponse` is `additionalProperties: false` over `{functionCallId, value, error}`
-  with no echo of the function name.
-- Draft-era names (`callFunction`, `functionResponse`) are accepted on input for compatibility and
-  **never emitted**. A change that emits one is a regression.
+- `callRendererFunction` **nests both** `functionCallId` and `callFunction` inside itself; the message
+  envelope carries neither, and the object is `additionalProperties: false`. The envelope-level
+  `functionCallId` on `AgentToRenderer` belongs to the pre-v1.0 path only — treating it as canonical is
+  what produced the silent mismatch 0.2.0 fixes.
+- `functionCallId` is the only correlator: `FunctionResponse` is `additionalProperties: false` over
+  `{functionCallId, value, error}`, with no echo of the function name.
+- The pre-v1.0 aliases accepted on input are exactly the ones in `ENVELOPE_KEYS` — `callFunction` and
+  `actionResponse`. `functionResponse` is **not** an input; it was this renderer's old _output_ name,
+  replaced by `rendererFunctionResponse`. Emitting it again is a regression.
 - `a2uiRendererCapabilities` is attached to every outbound message deliberately: the spec scopes
   message-carried capabilities to a conversation turn, so omitting it on later messages would withdraw
   A2UI support.

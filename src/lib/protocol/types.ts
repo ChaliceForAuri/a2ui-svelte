@@ -161,7 +161,11 @@ export interface DeleteSurface {
 
 export interface AgentToRenderer {
 	version: string;
-	/** Correlation id for `callRendererFunction`; lives at envelope level, not inside it. */
+	/**
+	 * Correlation id for the pre-v1.0 `callFunction` only. v1.0 nests its own
+	 * `functionCallId` inside `callRendererFunction`, so this is never read for
+	 * a canonical message.
+	 */
 	functionCallId?: string;
 	wantResponse?: boolean;
 	/** Correlation id for `actionResponse` (non-spec, see below). */
