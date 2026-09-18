@@ -1,6 +1,6 @@
 {
 	"name": "svelte-a2ui",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "A2UI (Agent-to-UI) protocol renderer for Svelte 5. Runes-native. Renders agent-authored declarative UI from a locked component catalog.",
 	"license": "Apache-2.0",
 	"type": "module",
@@ -20,6 +20,7 @@
 	},
 	"files": [
 		"dist",
+		"CHANGELOG.md",
 		"!dist/**/*.test.*",
 		"!dist/**/*.spec.*"
 	],

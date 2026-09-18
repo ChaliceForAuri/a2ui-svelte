@@ -6,7 +6,7 @@
 
 A2UI is the agent-to-UI protocol: an agent describes an interface as _data_ against a component catalog the client already owns, and the client renders it with its own components. No generated code, no sandboxed iframes, no HTML from the model. Google originated it; it's carried today over [A2A](https://a2a-protocol.org), [AG-UI](https://docs.ag-ui.com) and MCP.
 
-There are official renderers for React, Angular, Lit and Flutter. The Svelte slot is open — the A2UI roadmap lists _"Svelte/Kit — Community interest"_ as unclaimed, and the only prior community attempt targets the obsolete v0.8 wire format. This renderer targets **v1.0**, covers the full basic catalog, and is tested against the spec's own fixtures.
+There are official renderers for React, Angular, Lit and Flutter. This is the Svelte one — a **community** renderer, listed as the Svelte 5 entry on A2UI's own [ecosystem page](https://github.com/a2ui-project/a2ui/blob/main/docs/public/ecosystem/renderers.md) since September 2026. Community renderers are not maintained by the A2UI team. It targets **v1.0**, covers the full basic catalog, and is tested against the spec's own fixtures.
 
 ```svelte
 <script lang="ts">
@@ -126,7 +126,7 @@ export const appCatalog: Catalog = {
 const catalog = createCatalogRegistry([basicCatalog, appCatalog]);
 ```
 
-Your component receives resolved scalars spread at the top level, plus four namespaced props:
+Your component receives resolved scalars spread at the top level, plus namespaced props — `slots`, `bindings`, `actions`, `validation`, and `a2ui` for the raw wire spec:
 
 ```svelte
 <script lang="ts">
@@ -144,6 +144,8 @@ Your component receives resolved scalars spread at the top level, plus four name
 
 `bindings.x` is `{ value, set(next), path }` — two-way against the data model, scope-aware inside collection templates.
 
+`a2ui` is `{ id, component, spec, scope, pending }`. `pending` is a `ReadonlySet<string>` naming the props still waiting on an agent round trip — a value that is neither absent nor resolved, because the expression behind it called a function your catalog does not implement and it went to the agent. Render a skeleton for those rather than an empty string, or an agent-backed value flashes blank and then pops. The set clears per prop as each value arrives.
+
 Pass `{ strict: true }` to `createCatalogRegistry` to enforce the spec's rule that a component with no resolvable `catalogId` is an error rather than falling back to a name search across catalogs.
 
 ## Protocol coverage
@@ -154,7 +156,8 @@ Pass `{ strict: true }` to `createCatalogRegistry` to enforce the spec's rule th
 | `updateComponents` (id-keyed upsert, `root` gating, buffering)       | ✅                           |
 | `updateDataModel` (JSON Pointer paths, `null` deletes, root replace) | ✅                           |
 | `deleteSurface`                                                      | ✅                           |
-| `callFunction` / `functionResponse`, `callableFrom` enforcement      | ✅                           |
+| `callRendererFunction` / `rendererFunctionResponse`, `callableFrom`  | ✅                           |
+| `callAgentFunction` / `agentFunctionResponse` (unresolved → agent)   | ✅                           |
 | `actionResponse` → `responsePath`                                    | ✅                           |
 | Renderer → agent `action`, `error` (all four codes)                  | ✅                           |
 | `sendDataModel` → `a2uiRendererDataModel` metadata                   | ✅                           |
@@ -196,7 +199,7 @@ The threat model assumes the agent is untrusted.
 - **Markdown is escaped first, then marked up.** `Text` supports simple Markdown; the HTML handed to `{@html}` is built from markup this library emitted, never from agent HTML. Links are scheme-allowlisted (`http`/`https`/`mailto`) and get `noopener noreferrer`.
 - **`openUrl` requires a safe scheme** and opens with `noopener,noreferrer`.
 - **Bounded recursion.** `maxDepth` on surfaces, and a depth guard on function/expression evaluation that lives on the eval context so it survives re-entry from a custom function.
-- **`callableFrom` is enforced.** Agent-initiated `callFunction` against a renderer-only function returns `INVALID_FUNCTION_CALL`. Every built-in is renderer-only.
+- **`callableFrom` is enforced.** An agent-initiated `callRendererFunction` against a renderer-only function returns `INVALID_FUNCTION_CALL`. Every built-in is renderer-only.
 
 If you forward A2UI between agents, strip `metadata.a2uiRendererDataModel` — the spec requires it, to stop one sub-agent's surface state leaking into another's.
 
@@ -212,14 +215,17 @@ npm run dev
 ## Development
 
 ```bash
-npm test      # protocol + render suite, no build step
-npm run check # svelte-check
-npm run package
+npm test             # protocol + render suite, no build step
+npm run test:browser # the components, in real Chromium
+npm run check        # svelte-check
+npm run package      # svelte-package + publint
 ```
 
 ## Status
 
-`0.1.0`, pre-release. The protocol layer is covered by 75 tests including a replay of the specification's own contact-form fixture. The Svelte components have not yet been exercised in a browser test harness — that's the next thing.
+`0.2.0`. The protocol and render layers are covered by 103 tests on `node --test` — including a replay of the specification's own contact-form fixture — and the components by 23 more in real Chromium. `svelte-check` is clean, `publint` passes, and CI runs all of it on every push.
+
+Listed as the Svelte 5 community renderer on A2UI's ecosystem page. The spec's v1.0 is still a Candidate (finalize target Q4 2026) and the wire is re-verified against `specification/v1_0/` as it moves; two known conformance gaps remain: inline catalogs are not implemented, and catalog resolution defaults to a lenient name search across catalogs rather than the spec-mandated `catalogId` → surface default → error. Pass `{ strict: true }` to `createCatalogRegistry` for the strict rule.
 
 ## License
 
