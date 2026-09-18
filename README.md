@@ -6,7 +6,7 @@
 
 A2UI is the agent-to-UI protocol: an agent describes an interface as _data_ against a component catalog the client already owns, and the client renders it with its own components. No generated code, no sandboxed iframes, no HTML from the model. Google originated it; it's carried today over [A2A](https://a2a-protocol.org), [AG-UI](https://docs.ag-ui.com) and MCP.
 
-There are official renderers for React, Angular, Lit and Flutter. This is the Svelte one — listed as the Svelte 5 renderer on A2UI's own [ecosystem page](https://github.com/a2ui-project/a2ui/blob/main/docs/public/ecosystem/renderers.md) since September 2026. It targets **v1.0**, covers the full basic catalog, and is tested against the spec's own fixtures.
+There are official renderers for React, Angular, Lit and Flutter. This is the Svelte one — a **community** renderer, listed as the Svelte 5 entry on A2UI's own [ecosystem page](https://github.com/a2ui-project/a2ui/blob/main/docs/public/ecosystem/renderers.md) since September 2026. Community renderers are not maintained by the A2UI team. It targets **v1.0**, covers the full basic catalog, and is tested against the spec's own fixtures.
 
 ```svelte
 <script lang="ts">
@@ -144,6 +144,8 @@ Your component receives resolved scalars spread at the top level, plus namespace
 
 `bindings.x` is `{ value, set(next), path }` — two-way against the data model, scope-aware inside collection templates.
 
+`a2ui` is `{ id, component, spec, scope, pending }`. `pending` is a `ReadonlySet<string>` naming the props still waiting on an agent round trip — a value that is neither absent nor resolved, because the expression behind it called a function your catalog does not implement and it went to the agent. Render a skeleton for those rather than an empty string, or an agent-backed value flashes blank and then pops. The set clears per prop as each value arrives.
+
 Pass `{ strict: true }` to `createCatalogRegistry` to enforce the spec's rule that a component with no resolvable `catalogId` is an error rather than falling back to a name search across catalogs.
 
 ## Protocol coverage
@@ -223,7 +225,7 @@ npm run package      # svelte-package + publint
 
 `0.2.0`. The protocol and render layers are covered by 103 tests on `node --test` — including a replay of the specification's own contact-form fixture — and the components by 23 more in real Chromium. `svelte-check` is clean, `publint` passes, and CI runs all of it on every push.
 
-Listed as the Svelte 5 renderer on A2UI's ecosystem page. The spec's v1.0 is still a Candidate (finalize target Q4 2026) and the wire is re-verified against `specification/v1_0/` as it moves; the one known gap is inline catalogs, which are not implemented.
+Listed as the Svelte 5 community renderer on A2UI's ecosystem page. The spec's v1.0 is still a Candidate (finalize target Q4 2026) and the wire is re-verified against `specification/v1_0/` as it moves; the one known gap is inline catalogs, which are not implemented.
 
 ## License
 

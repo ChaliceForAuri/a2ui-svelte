@@ -2,7 +2,7 @@
 
 Notable changes to `svelte-a2ui`. Dates are the release date on npm.
 
-## 0.2.0 — unreleased
+## 0.2.0 — 2026-09-18
 
 Everything below shipped to `main` after 0.1.0 went to the registry. The first entry
 is a wire fix, so 0.2.0 supersedes 0.1.0 for anything using function calls.
