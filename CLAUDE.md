@@ -14,7 +14,7 @@ Consequence: **track the spec, don't improve on it.** If the spec says `Modal` h
 
 ## Repo status
 
-`0.2.0` in the working tree; **npm still serves `0.1.0`** (published 2026-08-13) because no `v*` tag has ever been pushed. Originally built in a sandbox where npm was blocked; the first-commit checklist has since been completed (2026-08-11):
+`0.2.0`, published to npm 2026-09-18 by `release.yml` on the `v0.2.0` tag — the first tagged release and the first carrying provenance. Originally built in a sandbox where npm was blocked; the first-commit checklist has since been completed (2026-08-11):
 
 - ✅ **The protocol and render layers are covered by 103 passing tests**, including a replay of the spec's own contact-form fixture (22 components walked from `root`).
 - ✅ Dependencies install cleanly; `package-lock.json` is committed (CI uses `npm ci`).
@@ -71,10 +71,20 @@ These are the rules that make the design work. Breaking one silently degrades co
 4. ~~A2A transport binding~~ — done 2026-08-15: `src/lib/transport/a2a.ts`, adapter-style like AG-UI (host brings its A2A client; we extract from Messages/Tasks/artifacts/status updates and wrap outbound). Envelope metadata is lifted onto the A2A message `metadata` per the extension spec. Legacy `application/json+a2ui` accepted on input, never emitted.
 5. ~~Hosted demo~~ — live at https://chaliceforauri.github.io/a2ui-svelte/ (deployed 2026-08-15 by `pages.yml` on every push to main; `STATIC_DEMO=1` swaps in adapter-static and the client-side replay transport in `src/routes/demo-script.ts`). A short demo video for the listing's Discussions post is still worth recording — screen-capture the page while the stream replays.
 6. ~~Submit to the A2UI ecosystem list~~ — done: PR [a2ui-project/a2ui#2290](https://github.com/a2ui-project/a2ui/pull/2290) merged 2026-09-01 (approved by `jacobsimionato`), adding the table row and a Highlights paragraph. Review feedback from `polina-c` — the demo's Book table did nothing — was what prompted the agent-answers-with-new-UI demo work. A duplicate PR (#2346) was closed by us; its diff has a ready-made **v1.0 column** for the renderers table if maintainers ever want one, since the table still only has v0.8/v0.9 columns and our row is marked under v0.9.
-7. **Cut the 0.2.0 release.** This is now the top item: npm's `0.1.0` predates the v1.0 envelope-name fix, so anyone installing from the registry — including via the ecosystem listing — gets the function-call half silently mismatched. The tree is 0.2.0 with a CHANGELOG; releasing needs `git tag v0.2.0 && git push --tags`, which fires `release.yml`. **Blocked until the npm trusted publisher is configured** (package Settings → Publishing access: GitHub repo `ChaliceForAuri/a2ui-svelte`, workflow `release.yml`); `0.1.0` was published by hand and carries no provenance attestation.
+7. ~~Cut the 0.2.0 release~~ — done 2026-09-18. **npm Trusted Publishing is configured and works**: the tag fired `release.yml`, which ran the full gate and published over OIDC as `GitHub Actions <npm-oidc-no-reply@github.com>` with an SLSA provenance attestation logged to Sigstore. Future releases are just `git tag vX.Y.Z && git push origin vX.Y.Z`. Two notes for next time: `npm view` lagged the publish by minutes, so trust the workflow log (`+ svelte-a2ui@0.2.0`) over an immediate registry query; and bump the version, date the CHANGELOG heading, and let the tag do the rest.
 8. A short demo video for the listing's Discussions post — screen-capture the hosted demo while the stream replays.
 
-Spec caution: v1.0 is a **Candidate** (finalize target Q4 2026) and the repo moves daily — re-verify wire details against `specification/v1_0/` before implementing new protocol surface. Drift was last checked 2026-09-17: nothing since 2026-09-01 changes the wire. `#2486` composes `FunctionCommon` at the envelope level, which is schema hygiene with explicitly zero wire changes; `#2466` moves to relative `common_types` refs; `#2677` clarifies that message-carried `a2uiRendererCapabilities` is turn-scoped and that **omitting it withdraws A2UI support for later turns** — which is why attaching it to every outbound message is correct, not merely convenient. The spec status line still reads Candidate, last updated Jun 8 2026. The strict no-fallback catalog-resolution rule (per-component `catalogId` → surface default → error) is spec-mandated; our lenient default name-search should eventually be revisited.
+Spec caution: v1.0 is a **Candidate** (finalize target Q4 2026) and the repo moves daily — re-verify wire details against `specification/v1_0/` before implementing new protocol surface. Drift was last checked 2026-09-18: nothing since 2026-09-01 changes the wire. `#2486` composes `FunctionCommon` at the envelope level, which is schema hygiene with explicitly zero wire changes; `#2466` moves to relative `common_types` refs; `#2677` clarifies that message-carried `a2uiRendererCapabilities` is turn-scoped and that **omitting it withdraws A2UI support for later turns** — which is why attaching it to every outbound message is correct, not merely convenient. The spec status line still reads Candidate, last updated Jun 8 2026. The strict no-fallback catalog-resolution rule (per-component `catalogId` → surface default → error) is spec-mandated; our lenient default name-search should eventually be revisited.
+
+## Reviewer guidance lives elsewhere
+
+`.github/copilot-instructions.md` and `.github/instructions/*.instructions.md` are what GitHub Copilot
+code review reads (this file is a builder's doc; Copilot recognizes it, but it is the wrong shape for
+reviewing a diff). They restate the invariants below as review rules and list the deliberate choices
+that read as defects. **When an invariant here changes, change them too** — guidance that describes a
+shape the code no longer uses is worse than none: a review of PR #9 caught those files asserting the
+_pre-v1.0_ function-call nesting, which would have walked the next contributor back into the silent
+mismatch 0.2.0 fixes.
 
 ## Conventions
 
